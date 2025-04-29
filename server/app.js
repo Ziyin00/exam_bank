@@ -1,6 +1,7 @@
 const express = require('express');
 const adminRouter = require('./Route/adminRouter')
 const cors = require('cors');
+const studeRouter = require('./Route/studentRouter')
 require('dotenv').config();
 
 const app = express();
@@ -17,6 +18,7 @@ app.use(cors({
 
 app.use(express.json());
 app.use('/admin', adminRouter);
+app.use('/student', studeRouter)
 
 // app.use(express.static('public'));
 

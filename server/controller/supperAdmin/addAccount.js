@@ -1,8 +1,24 @@
 const bcrypt = require('bcrypt');
 const connection = require('../../db');
+const path = require('path')
+const multer = require('multer')
 
 
-const addAccount = async (req, res) => {
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'public/image')
+    },
+    filename: (req, file, cb) => {
+        cb(null, file.fieldname + '_' + Date.now() + path.extname(file.originalname))
+    }
+})
+const upload = multer({
+    storage: storage
+})
+
+
+
+const addAccount = [upload.single('image'), async (req, res) => {
     const { name, email, password } = req.body;
 
     if (!name || !email || !password) {
@@ -54,6 +70,6 @@ const addAccount = async (req, res) => {
         console.log(err.message)
         return res.status(400).json({ status: false, error: 'server error' })
     }
-}
+}]
 
 module.exports = { addAccount }

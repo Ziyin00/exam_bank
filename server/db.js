@@ -46,10 +46,8 @@ connection.getConnection((err) => {
             password VARCHAR(100) NOT NULL,
             image VARCHAR(255),
             department_id INT,
-            class_id INT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (department_id) REFERENCES departments(id),
-            FOREIGN KEY (class_id) REFERENCES classes(id)
+            FOREIGN KEY (department_id) REFERENCES departments(id)
         );`,
 
         `CREATE TABLE IF NOT EXISTS categories (
