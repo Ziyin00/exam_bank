@@ -9,6 +9,7 @@ const { getStudents } = require('../controller/supperAdmin/get.students')
 const { addTeachers } = require('../controller/supperAdmin/add.teachers')
 const { deleteTeacher } = require('../controller/supperAdmin/delete.teacher')
 const { addCourse } = require('../controller/supperAdmin/addCours')
+const { getUntiteldSection } = require('../controller/supperAdmin/get.untitled.section')
 
 
 const router = express.Router()
@@ -26,6 +27,7 @@ router.post('/add-cours', addCourse)
 router.get('/get-category', getCategory)
 router.get('/get-departments', getDepartment)
 router.get('/get-student', getStudents)
+router.get('/get-untiteld-section', getUntiteldSection)
 
 // delete
 
