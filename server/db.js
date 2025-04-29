@@ -117,7 +117,7 @@ connection.getConnection((err) => {
                 if (err) {
                     console.error(`Error executing query ${index + 1}:`, err.message);
                 } else {
-                    console.log(`Table created/verified for query ${index + 1}`);
+                    // console.log(`Table created/verified for query ${index + 1}`);
                 }
             });
         });
