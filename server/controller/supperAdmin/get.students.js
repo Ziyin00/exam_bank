@@ -11,8 +11,7 @@ const getStudents = async (req, res) => {
             students.email, 
             students.image, 
             students.created_at,
-            departments.department_name,
-            classes.class_name
+            departments.department_name
         FROM students
         LEFT JOIN departments ON students.department_id = departments.id
     `;

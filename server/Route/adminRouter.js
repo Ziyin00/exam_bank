@@ -6,6 +6,7 @@ const { addAccount } = require('../controller/supperAdmin/addAccount')
 const { addDepartment } = require('../controller/supperAdmin/add.dipartment')
 const { getDepartment } = require('../controller/supperAdmin/get.department')
 const { getStudents } = require('../controller/supperAdmin/get.students')
+const { addTeachers } = require('../controller/supperAdmin/add.teachers')
 
 
 const router = express.Router()
@@ -16,6 +17,7 @@ router.post('/add-category', addCategory)
 router.post('/login', adminLogin)
 router.post('/add-account', addAccount)
 router.post('/add-department', addDepartment)
+router.post('/add-teachers', addTeachers)
 
 // gets
 router.get('/get-category', getCategory)
