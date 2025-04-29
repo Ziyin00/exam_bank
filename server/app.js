@@ -1,6 +1,6 @@
 const express = require('express');
 const adminRouter = require('./Route/adminRouter')
-const cors = require('cors');
+const cors = require('core');
 require('dotenv').config();
 
 const app = express();
