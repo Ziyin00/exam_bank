@@ -1,6 +1,6 @@
 const express = require('express');
 const adminRouter = require('./Route/adminRouter')
-const cors = require('core');
+const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
@@ -23,5 +23,5 @@ app.use('/admin', adminRouter);
 
 
 app.listen(process.env.PORT || 3032, () => {
-    console.log(`Server is running on port ${process.env.PORT || 3032}`);
+    console.log(`Server is running on port ${process.env.PORT}`);
 });
