@@ -1,5 +1,5 @@
 const express = require('express');
-const adminRouter = require('./Route/adminRouter')
+const adminRouter = require('./Route/supperAdminRouter')
 const cors = require('cors');
 const studeRouter = require('./Route/studentRouter')
 require('dotenv').config();
