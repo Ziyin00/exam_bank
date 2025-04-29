@@ -62,12 +62,27 @@ connection.getConnection((err) => {
 
         `CREATE TABLE IF NOT EXISTS courses (
             id INT AUTO_INCREMENT PRIMARY KEY,
-            name VARCHAR(100) NOT NULL,
-            code VARCHAR(50) UNIQUE NOT NULL,
-            department_id INT,
-            teacher_id INT,
-            FOREIGN KEY (department_id) REFERENCES departments(id),
-            FOREIGN KEY (teacher_id) REFERENCES teachers(id)
+            title VARCHAR(150) NOT NULL,
+            course_tag VARCHAR(50),
+            category_id INT,
+            benefit1 TEXT,
+            benefit2 TEXT,
+            prerequisite1 TEXT,
+            prerequisite2 TEXT,
+            image VARCHAR(255),
+            description TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (category_id) REFERENCES categories(id)
+                ON DELETE SET NULL ON UPDATE CASCADE
+        );`,
+
+        `CREATE TABLE IF NOT EXISTS course_links (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            course_id INT NOT NULL,
+            link_name VARCHAR(100),
+            link VARCHAR(255),
+            FOREIGN KEY (course_id) REFERENCES courses(id)
+                ON DELETE CASCADE ON UPDATE CASCADE
         );`,
 
         `CREATE TABLE IF NOT EXISTS exams (
