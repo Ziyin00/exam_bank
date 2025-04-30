@@ -19,7 +19,20 @@ const upload = multer({
 const updateTeacher = [
     upload.single('image'),
     async (req, res) => {
-        const teacher_id = req.params.id;
+
+        const token = req.header('t-token');
+        if (!token) {
+            return res.status(400).json({ status: false, message: 'Access denied, no token provided!' });
+        }
+
+        let teacher_id;
+        try {
+            const decoded = jwt.verify(token, process.env.TEACHER_PASSWORD); // Use your JWT secret here
+            teacher_id = decoded.id;
+        } catch (err) {
+            return res.status(401).json({ status: false, message: 'Invalid or expired token!' });
+        }
+
         const { name, email, password } = req.body;
         const image = req.file ? req.file.filename : null;
 

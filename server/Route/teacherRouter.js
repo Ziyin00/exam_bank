@@ -24,7 +24,7 @@ router.get('/get-QA/:id', getCourseQA)
 router.get('/get-exams', getAllExams)
 
 // update profile/edit profile
-router.put('/edit-profile/:id', updateTeacher)
+router.put('/edit-profile', updateTeacher)
 
 
 module.exports = router
