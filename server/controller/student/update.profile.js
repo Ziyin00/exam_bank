@@ -2,6 +2,7 @@ const connection = require('../../db');
 const bcrypt = require('bcrypt');
 const path = require('path');
 const multer = require('multer');
+const jwt = require('jsonwebtoken')
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -19,7 +20,22 @@ const upload = multer({
 const studentUpdate = [
     upload.single('image'),
     async (req, res) => {
-        const student_id = req.params.id;
+
+
+        const token = req.header('s-token');
+        if (!token) {
+            return res.status(400).json({ status: false, message: 'Access denied, no token provided!' });
+        }
+
+        let student_id;
+        try {
+            const decoded = jwt.verify(token, process.env.TEACHER_PASSWORD);
+            student_id = decoded.id;
+        } catch (err) {
+            return res.status(401).json({ status: false, message: 'Invalid or expired token!' });
+        }
+
+
         const { name, email, password } = req.body;
         const image = req.file ? req.file.filename : null;
 

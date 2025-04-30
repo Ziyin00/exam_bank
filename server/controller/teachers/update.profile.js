@@ -1,6 +1,7 @@
 const connection = require('../../db');
 const bcrypt = require('bcrypt');
 const path = require('path');
+const jwt = require('jsonwebtoken')
 const multer = require('multer');
 
 const storage = multer.diskStorage({

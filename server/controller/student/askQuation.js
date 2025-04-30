@@ -3,7 +3,7 @@ const connection = require("../../db");
 
 const askQuestion = async (req, res) => {
     const { course_id, question } = req.body;
-    const token = req.header("token");
+    const token = req.header("s-token");
 
     if (!token) {
         return res.status(400).json({ status: false, message: "No token provided" });
