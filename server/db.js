@@ -102,18 +102,32 @@ connection.getConnection((err) => {
             course_id INT NOT NULL,
             student_id INT NOT NULL,
             question TEXT NOT NULL,
-            reply TEXT,
-            teacher_id INT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            replied_at TIMESTAMP NULL DEFAULT NULL,
-            FOREIGN KEY (course_id) REFERENCES courses(id)
-                ON DELETE CASCADE ON UPDATE CASCADE,
-            FOREIGN KEY (student_id) REFERENCES students(id)
-                ON DELETE CASCADE ON UPDATE CASCADE,
-            FOREIGN KEY (teacher_id) REFERENCES teachers(id)
+            FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+            FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
+        );`,
+
+        ` CREATE TABLE IF NOT EXISTS course_answers (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            question_id INT NOT NULL,
+            teacher_id INT NOT NULL,
+            answer TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (question_id) REFERENCES course_questions(id) ON DELETE CASCADE,
+            FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE CASCADE
+        );`,
+
+        `CREATE TABLE IF NOT EXISTS exams (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            title VARCHAR(150) NOT NULL,
+            description TEXT,
+            image VARCHAR(255),
+            category_id INT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (category_id) REFERENCES categories(id)
                 ON DELETE SET NULL ON UPDATE CASCADE
         );`
-    ];
+    ]
 
 
 

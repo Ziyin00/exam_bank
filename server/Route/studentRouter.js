@@ -5,6 +5,7 @@ const { getCoursesOnePerCategory } = require('../controller/student/getCours')
 const { getDetailCours } = require('../controller/student/get.detail.course')
 const { giveComment } = require('../controller/student/give.comment')
 const { updateStudent } = require('../controller/supperAdmin/edit.student')
+const { askQuestion } = require('../controller/student/askQuation')
 
 const router = express.Router()
 
@@ -12,6 +13,7 @@ const router = express.Router()
 router.post('/student-sign-up', studentSignUp)
 router.post('/login', studentLogin)
 router.post('/give-comment', giveComment)
+router.post('/ask-quation', askQuestion)
 
 // put(update student)
 router.put('/edit-profile/:id', updateStudent)
