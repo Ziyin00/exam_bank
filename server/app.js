@@ -22,7 +22,8 @@ app.use('/admin', adminRouter);
 app.use('/student', studeRouter)
 app.use('/teacher', teacehrRouter)
 
-// app.use(express.static('public'));
+// to store the image in the public/image
+app.use(express.static('public'));
 
 
 
