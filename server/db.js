@@ -85,34 +85,33 @@ connection.getConnection((err) => {
                 ON DELETE CASCADE ON UPDATE CASCADE
         );`,
 
-        `CREATE TABLE IF NOT EXISTS exams (
+        `CREATE TABLE IF NOT EXISTS course_comments (
             id INT AUTO_INCREMENT PRIMARY KEY,
             course_id INT NOT NULL,
-            title VARCHAR(150) NOT NULL,
-            date DATE,
-            duration_minutes INT,
-            total_marks INT,
+            student_id INT NOT NULL,
+            comment TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (course_id) REFERENCES courses(id)
+                ON DELETE CASCADE ON UPDATE CASCADE,
+            FOREIGN KEY (student_id) REFERENCES students(id)
                 ON DELETE CASCADE ON UPDATE CASCADE
         );`,
 
-        `CREATE TABLE IF NOT EXISTS questions (
+        `CREATE TABLE IF NOT EXISTS course_questions (
             id INT AUTO_INCREMENT PRIMARY KEY,
-            exam_id INT NOT NULL,
-            text TEXT NOT NULL,
-            mark INT,
-            FOREIGN KEY (exam_id) REFERENCES exams(id)
-                ON DELETE CASCADE ON UPDATE CASCADE
-        );`,
-
-        `CREATE TABLE IF NOT EXISTS answers (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            question_id INT NOT NULL,
-            answer_text TEXT NOT NULL,
-            is_correct BOOLEAN DEFAULT FALSE,
-            FOREIGN KEY (question_id) REFERENCES questions(id)
-                ON DELETE CASCADE ON UPDATE CASCADE
+            course_id INT NOT NULL,
+            student_id INT NOT NULL,
+            question TEXT NOT NULL,
+            reply TEXT,
+            teacher_id INT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            replied_at TIMESTAMP NULL DEFAULT NULL,
+            FOREIGN KEY (course_id) REFERENCES courses(id)
+                ON DELETE CASCADE ON UPDATE CASCADE,
+            FOREIGN KEY (student_id) REFERENCES students(id)
+                ON DELETE CASCADE ON UPDATE CASCADE,
+            FOREIGN KEY (teacher_id) REFERENCES teachers(id)
+                ON DELETE SET NULL ON UPDATE CASCADE
         );`
     ];
 
