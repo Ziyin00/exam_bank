@@ -8,7 +8,6 @@ const { getDepartment } = require('../controller/supperAdmin/get.department')
 const { getStudents } = require('../controller/supperAdmin/get.students')
 const { addTeachers } = require('../controller/supperAdmin/add.teachers')
 const { deleteTeacher } = require('../controller/supperAdmin/delete.teacher')
-const { addCourse } = require('../controller/supperAdmin/addCours')
 const { getUntiteldSection } = require('../controller/supperAdmin/get.untitled.section')
 
 
@@ -21,7 +20,6 @@ router.post('/login', adminLogin)
 router.post('/add-account', addAccount)
 router.post('/add-department', addDepartment)
 router.post('/add-teachers', addTeachers)
-router.post('/add-cours', addCourse)
 
 // gets
 router.get('/get-category', getCategory)
