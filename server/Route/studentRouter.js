@@ -6,6 +6,7 @@ const { getDetailCours } = require('../controller/student/get.detail.course')
 const { giveComment } = require('../controller/student/give.comment')
 const { updateStudent } = require('../controller/supperAdmin/edit.student')
 const { askQuestion } = require('../controller/student/askQuation')
+const { getCourseQA } = require('../controller/teachers/getCoursQA')
 
 const router = express.Router()
 
@@ -23,5 +24,6 @@ router.put('/edit-profile/:id', updateStudent)
 // get
 router.get('/get-cours', getCoursesOnePerCategory)
 router.get('/get-detail-course/:id', getDetailCours)
+router.get('/get-QA/:id', getCourseQA)
 
 module.exports = router
