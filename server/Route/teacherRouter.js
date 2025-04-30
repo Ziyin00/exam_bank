@@ -7,6 +7,7 @@ const { updateTeacher } = require('../controller/teachers/update.profile')
 const { answerQuestion } = require('../controller/teachers/answer.quation')
 const { getCourseQA } = require('../controller/teachers/getCoursQA')
 const { postExams } = require('../controller/teachers/add.exams')
+const { getAllExams } = require('../controller/teachers/get.exams')
 
 const router = express.Router()
 
@@ -20,6 +21,7 @@ router.post('/post-exams', postExams)
 // get
 router.get('/get-comment', getAllComments)
 router.get('/get-QA/:id', getCourseQA)
+router.get('/get-exams', getAllExams)
 
 // update profile/edit profile
 router.put('/edit-profile/:id', updateTeacher)
