@@ -11,6 +11,7 @@ const { deleteTeacher } = require('../controller/supperAdmin/delete.teacher')
 const { updateTeacher } = require('../controller/supperAdmin/edit.tacher')
 const { deleteStudent } = require('../controller/supperAdmin/delete.student')
 const { updateStudent } = require('../controller/supperAdmin/edit.student')
+const { editAccount } = require('../controller/supperAdmin/edit.account')
 
 
 const router = express.Router()
@@ -35,6 +36,6 @@ router.delete('/delete-student/:id', deleteStudent)
 // put
 router.put('/edit-teacher/:id', updateTeacher)
 router.put('/edit-student/:id', updateStudent)
-
+router.put('/edit-account', editAccount);
 
 module.exports = router
