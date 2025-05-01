@@ -36,7 +36,7 @@ const getDetailCours = async (req, res) => {
                     return res.status(500).json({ status: false, message: "Error fetching related courses" });
                 }
 
-                return res.status(200).json({ status: true, courses });
+                return res.status(200).json({ status: true, data: courses });
             });
         });
 

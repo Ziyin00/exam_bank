@@ -40,7 +40,7 @@ const studentLogin = async (req, res) => {
                 { expiresIn: '30d' }
             );
 
-            res.status(200).json({ loginStates: true, token: token });
+            res.status(200).json({ loginStatus: true, token: token });
 
         });
 
