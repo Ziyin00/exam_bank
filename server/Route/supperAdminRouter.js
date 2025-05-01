@@ -8,8 +8,9 @@ const { getDepartment } = require('../controller/supperAdmin/get.department')
 const { getStudents } = require('../controller/supperAdmin/get.students')
 const { addTeachers } = require('../controller/supperAdmin/add.teachers')
 const { deleteTeacher } = require('../controller/supperAdmin/delete.teacher')
-const { addCourse } = require('../controller/supperAdmin/addCours')
-const { getUntiteldSection } = require('../controller/supperAdmin/get.untitled.section')
+const { updateTeacher } = require('../controller/supperAdmin/edit.tacher')
+const { deleteStudent } = require('../controller/supperAdmin/delete.student')
+const { updateStudent } = require('../controller/supperAdmin/edit.student')
 
 
 const router = express.Router()
@@ -21,16 +22,19 @@ router.post('/login', adminLogin)
 router.post('/add-account', addAccount)
 router.post('/add-department', addDepartment)
 router.post('/add-teachers', addTeachers)
-router.post('/add-cours', addCourse)
 
 // gets
 router.get('/get-category', getCategory)
 router.get('/get-departments', getDepartment)
 router.get('/get-student', getStudents)
-router.get('/get-untiteld-section', getUntiteldSection)
 
 // delete
-
 router.delete('/delete-teacher/:id', deleteTeacher)
+router.delete('/delete-student/:id', deleteStudent)
+
+// put
+router.put('/edit-teacher/:id', updateTeacher)
+router.put('/edit-student/:id', updateStudent)
+
 
 module.exports = router
