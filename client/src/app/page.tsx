@@ -11,6 +11,7 @@ import Benefit from "../components/Benefit";
 import { Testimonial } from "../components/Testimonial";
 import FAQ from "../components/Faq";
 import Footer from "../components/Footer";
+import { GlobeDemo } from "../components/GlobeDemo";
 
 export default function Home() {
 
@@ -24,7 +25,10 @@ export default function Home() {
       <Course />
       <Benefit />
       <Testimonial />
+      
+   
       <FAQ />
+      
       <Footer />
     
     </>

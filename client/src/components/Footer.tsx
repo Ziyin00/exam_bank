@@ -28,7 +28,7 @@ const Footer = () => {
   ]
 
   return (
-    <footer className="bg-gray-900 text-gray-300 py-12 mt-20 dark:bg-slate-800">
+    <footer className="bg-gray-900 text-gray-300 py-12 mt-20 dark:bg-gray-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand Section */}
@@ -93,7 +93,7 @@ const Footer = () => {
             <div className="space-y-2 text-sm">
               <div className="flex items-center space-x-2">
                 <SiGmail />
-                <span>support@eduplatform.com</span>
+                <span>support@examBank.com</span>
               </div>
               <p>+1 (555) 123-4567</p>
               <p>123 Education Street</p>
@@ -124,7 +124,7 @@ const Footer = () => {
         {/* Copyright */}
         <div className="mt-8 pt-8 border-t border-gray-800 text-center text-sm">
           <p>
-            © {currentYear} EduPlatform. All rights reserved.
+            © {currentYear} ExamBank. All rights reserved.
           </p>
         </div>
       </div>

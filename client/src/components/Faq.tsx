@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { HiMinus, HiPlus } from 'react-icons/hi';
 import {ColourfulText} from "../../src/components/ui/colour-full-text";
+import { GlobeDemo } from './GlobeDemo';
 
 // Demo FAQ data
 const demoFaqs = [
@@ -35,13 +36,15 @@ const FAQ = () => {
   };
 
   return (
-    <div className="w-full py-2 px-4 sm:px-6 lg:px-8 bg-white dark:bg-slate-900 z-50">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl sm:text-4xl font-bold text-center text-gray-900 dark:text-white mb-8">
+    <div className="w-full py-2 px-4 sm:px-6 lg:px-8 bg-white dark:bg-slate-900 ">
+      <div className="w-full mx-auto">
+        <h1 className="text-3xl sm:text-4xl font-bold text-center text-gray-900 dark:text-white lg:mb-8 ">
           Frequently Asked  <ColourfulText text="Questions" /> 
         </h1>
-        
-        <div className="space-y-6">
+        <div className="w-full flex flex-col lg:flex-row justify-around  items-center ">
+          <GlobeDemo />
+
+        <div className="space-y-6 w-[55%] -ml-40 z-1">
           {questions.map((q) => (
             <div 
               key={q._id}
@@ -77,6 +80,7 @@ const FAQ = () => {
               )}
             </div>
           ))}
+        </div>
         </div>
       </div>
     </div>

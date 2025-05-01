@@ -11,6 +11,8 @@
   "dependencies": {
     "@mui/material": "^7.0.2",
     "@radix-ui/react-navigation-menu": "^1.2.10",
+    "@react-three/drei": "^10.0.7",
+    "@react-three/fiber": "^9.0.0-alpha.8",
     "@tabler/icons-react": "^3.31.0",
     "class-variance-authority": "^0.7.1",
     "client": "file:",
@@ -29,6 +31,8 @@
     "react-redux": "^9.2.0",
     "redux": "^5.0.1",
     "tailwind-merge": "^3.2.0",
+    "three": "^0.176.0",
+    "three-globe": "^2.42.4",
     "yup": "^1.6.1"
   },
   "devDependencies": {

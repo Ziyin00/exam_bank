@@ -1,4 +1,5 @@
 import CourseDetailsPage from '@/src/components/Course/CourseDetailsPage';
+import Footer from '@/src/components/Footer';
 import Navbar from '@/src/components/Navbar';
 import React from 'react'
 
@@ -9,6 +10,7 @@ const page = (props: Props) => {
     <div>
       <Navbar />
       <CourseDetailsPage />
+      <Footer/>
     </div>
   )
 }
