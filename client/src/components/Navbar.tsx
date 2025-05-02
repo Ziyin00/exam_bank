@@ -129,13 +129,13 @@ const Navbar = () => {
         {/* Desktop Auth Buttons */}
         <div className="hidden gap-4 lg:flex">
           <Link
-            href="/signup"
+            href="/Signup"
             className="rounded bg-gray-800 px-4 py-2 font-semibold text-white hover:shadow"
           >
             Register
           </Link>
           <Link
-            href="/login"
+            href="/Login"
             className="rounded border px-4 py-2 font-semibold hover:shadow"
           >
             Login

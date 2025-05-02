@@ -62,18 +62,18 @@ const CourseCard = () => {
         </div>
 
         <div className="flex justify-between items-center mt-4">
-          <div className="flex gap-2">
+          {/* <div className="flex gap-2">
             <span className="text-xl font-bold text-blue-600 dark:text-blue-400">
               ${demoItem.price}
             </span>
             <span className="text-gray-500 line-through dark:text-gray-400">
               ${demoItem.estimatedPrice}
             </span>
-          </div>
+          </div> */}
           
           <div className="flex items-center gap-1 text-gray-600 dark:text-gray-300">
             <AiOutlineUnorderedList className="text-xl" />
-            <span>{demoItem.courseData.length} Lectures</span>
+            <span>{demoItem.courseData.length} Work Sheets</span>
           </div>
         </div>
       </div>

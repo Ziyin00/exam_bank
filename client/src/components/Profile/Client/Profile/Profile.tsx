@@ -2,231 +2,183 @@
 
 import React, { FC, useEffect, useState } from 'react'
 import SideBarProfile from './SideBarProfile'
-
 import { signOut } from 'next-auth/react'
 import ProfileInfo from './ProfileInfo'
 import ChangePassword from './ChangePassword'
 import CourseCard from '@/src/components/Course/CourseCard'
+// import { Loader } from '@/src/components/Loader/Loader'
+// import { useGetAllCoursesQuery } from '@/redux/features/courses/coursesApi'
+import { toast } from 'react-hot-toast'
+import { motion } from 'framer-motion'
+import { FiSettings, FiBook, FiUsers } from 'react-icons/fi'
 
-
-type Props = {
-  user: any;
-}
+// Demo data configuration
+const DEMO_USER = {
+  name: "Sarah Johnson",
+  email: "sarah@demo.com",
+  avatar: {
+    url: "/demo-avatar.jpg"
+  },
+  role: "student",
+  courses: [
+    {
+      _id: "1",
+      name: "Web Development Bootcamp",
+      thumbnail: "/demo-course-web.jpg",
+      purchasedDate: "2024-03-01",
+      progress: 65
+    },
+    {
+      _id: "2",
+      name: "Advanced JavaScript",
+      thumbnail: "/demo-course-js.jpg",
+      purchasedDate: "2024-02-15",
+      progress: 40
+    }
+  ]
+};
 
 const Profile: FC<Props> = ({ user }) => {
   const [scroll, setScroll] = useState(false)
-  const [avatar, setAvatar] = useState(user?.avatar?.url || '')
-  const [logout, setLogout] = useState(false)
+  const [avatar, setAvatar] = useState(user?.avatar?.url || '/demo-avatar.jpg')
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [courses, setCourses] = useState<any[]>([])
-  const [active, setActive] = useState(1) // Added active state
+  const [active, setActive] = useState(1)
   
+  // Use demo data if real user isn't available
+  const currentUser = user || DEMO_USER;
 
-  // Scroll handler with cleanup
+  // const { data: coursesData, isLoading } = useGetAllCoursesQuery({})
+
   useEffect(() => {
-    const handleScroll = () => {
-      setScroll(window.scrollY > 85)
-    }
-
+    const handleScroll = () => setScroll(window.scrollY > 85)
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
+  useEffect(() => {
+    if (currentUser.courses) {
+      const userCourses = currentUser.courses.map((userCourse: any) => ({
+        ...userCourse,
+        // Add demo course details
+        ratings: 4.8,
+        estimatedLength: "15 hours",
+        instructor: "John Doe",
+        price: 49.99
+      }));
+      setCourses(userCourses)
+    }
+  }, [currentUser.courses])
 
-
-  const logoutHandler = async () => {
+  const handleLogout = async () => {
     try {
-      setLogout(true)
+      setIsLoggingOut(true)
       await signOut()
     } catch (error) {
-      console.error('Logout failed:', error)
+      toast.error('Logout failed. Please try again.')
+    } finally {
+      setIsLoggingOut(false)
     }
   }
 
+  const sectionVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 },
+  }
+
   return (
-    <div className='w-[85%] flex mx-auto'>
-      {/* Sidebar */}
-      <div className={`w-[60px] lg:w-[310px] h-[450px] dark:bg-slate-900 bg-white bg-opacity-90 border dark:border-[#ffffff1d] border-[#ffffff0f] rounded-[5px] shadow-xl dark:shadow-sm mt-[80px] mb-[80px] sticky ${
-        scroll ? "top-[120px]" : "top-[30px]"
-      } left-[30px]`}>
-        <SideBarProfile
-          user={user}
-          active={active}
-          avatar={avatar}
-          setActive={setActive}
-          logoutHandler={logoutHandler}
-        />
-      </div>
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+      <div className="w-[85%] flex flex-col lg:flex-row mx-auto gap-8 pt-24 pb-12">
+        {/* Sidebar */}
+        <motion.div
+          initial={{ x: -20, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          className={`w-full lg:w-[300px] flex-shrink-0 bg-white dark:bg-gray-800 rounded-xl p-6 shadow-xl backdrop-blur-lg border border-gray-200 dark:border-gray-700 sticky top-6 h-fit`}
+        >
+          <SideBarProfile
+            user={currentUser}
+            active={active}
+            avatar={avatar}
+            setActive={setActive}
+            logoutHandler={handleLogout}
+            isLoggingOut={isLoggingOut}
+          />
+        </motion.div>
 
-      {/* Main Content */}
-      <div className='flex-1'>
-        {active === 1 && (
-          <div className='w-full h-full bg-transparent mt-[80px]'>
-            <ProfileInfo avatar={avatar} user={user} />
-          </div>
-        )}
+        {/* Main Content */}
+        <div className="flex-1">
+          <motion.div
+            key={active}
+            variants={sectionVariants}
+            initial="hidden"
+            animate="visible"
+            transition={{ duration: 0.3 }}
+          >
+            {active === 1 && (
+              <ProfileInfo 
+                avatar={avatar} 
+                user={currentUser} 
+                onAvatarChange={(newAvatar: string) => setAvatar(newAvatar)}
+              />
+            )}
 
-        {active === 2 && (
-          <div className='w-full h-full bg-transparent mt-[80px]'>
-            <ChangePassword user={user} /> {/* Added user prop */}
-          </div>
-        )}
+            {active === 2 && <ChangePassword user={currentUser} />}
 
-        {active === 3 && (
-          <div className='w-full h-full bg-transparent mt-[80px]'>
-            <div className="w-full pl-7 px-2 lg:px-10 lg:pl-8">
-            
-                <div className="text-center">Loading courses...</div>
-           
-                <>
-                  <div className="grid grid-cols-1 gap-[20px] md:grid-cols-2 lg:grid-cols-3">
-                    {courses.map((item: any) => (
-                      <CourseCard 
-                        key={item._id}
-                         
-                         
-                       
-                      />
-                    ))}
+            {active === 3 && (
+              <div className="space-y-8">
+                <div className="flex items-center justify-between mb-8">
+                  <h2 className="text-3xl font-bold text-gray-900 dark:text-white ml-10">
+                    Your Learning Journey
+                  </h2>
+                  <div className="flex items-center gap-4 text-gray-500 dark:text-gray-400">
+                    <FiUsers className="text-xl" />
+                    <span>{courses.length} Enrolled Courses</span>
                   </div>
-                  {courses.length === 0 && (
-                    <h1 className='text-center text-[20px] font-Poppins'>
-                      You don&apos;t have any purchased courses!
-                    </h1>
-                  )}
-                </>
-           
-            </div>
-          </div>
-        )}
+                </div>
+                
+               
+                  {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="animate-pulse bg-gray-100 dark:bg-gray-700 rounded-xl h-96" />
+                    ))}
+                  </div> */}
+              
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 ml-10">
+                    {courses.length > 0 ? (
+                      courses.map((course) => (
+                        <CourseCard
+                          key={course._id}
+                          course={course}
+                          isProfile={true}
+                        />
+                      ))
+                    ) : (
+                      <motion.div
+                        initial={{ scale: 0.9 }}
+                        animate={{ scale: 1 }}
+                        className="col-span-full text-center py-12 space-y-4"
+                      >
+                        <div className="text-6xl mb-4">🎓</div>
+                        <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300">
+                          No Courses Purchased Yet!
+                        </h3>
+                        <p className="text-gray-500 dark:text-gray-400 mb-6">
+                          Start your learning adventure with our curated courses
+                        </p>
+                        <button className="bg-gary-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition-colors">
+                          Browse Courses
+                        </button>
+                      </motion.div>
+                    )}
+                  </div>
+              
+              </div>
+            )}
+          </motion.div>
+        </div>
       </div>
     </div>
   )
 }
 
 export default Profile
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// "use client"
-
-// import React, { FC, useEffect, useState } from 'react'
-// import SideBarProfile from './SideBarProfile'
-// import { useLogOutQuery } from '@/redux/features/auth/authApi';
-// import { signOut } from 'next-auth/react';
-// import ProfileInfo from './ProfileInfo';
-// import ChangePassword from './ChangePassword';
-// import CourseCard from '../Course/CourseCard';
-// import { useGetAllCoursesQuery } from '@/redux/features/courses/coursesApi';
-// type Props = {
-
-//   user: any;
-// }
-
-// const Profile: FC<Props> = ({user}) => {
-//   const [scroll, setScroll] = useState(false);
-//   const [avatar, setAvatar] = useState(user?.avatar)
-//   const [logout, setLogout] = useState(false);
-//   const [courses, setCourses] = useState([]);
-//   const { data, isLoading } = useGetAllCoursesQuery(undefined, {}); 
-  
-//   const { } = useLogOutQuery(undefined, {
-//     skip: !logout ? true : false,
-//   })
-//   const [active, setActive] = useState(1)
-//   const logoutHandler = async() => {
-//     setLogout(true)
-//     await signOut();
-//   }
-
-//   if (typeof window !== 'undefined') {
-//     window.addEventListener('scroll', () => {
-//       if (window.scrollY > 85) {
-//         setScroll(true)
-//       } else {
-//         setScroll(false)
-//       }
-//     })
-//   };
-
-//   useEffect(() => {
-//          if (data) {
-//            const filteredCourses = user.courses.map((userCourse: any) => 
-//              data.courses.find((course: any) => course._id === userCourse._id) ).filter((course: any) => course !== undefined);
-//            setCourses(filteredCourses)
-//          }
-//   },[data, user.courses])
-//   return (
-//     <div className='w-[85%] flex mx-auto '>
-//       <div className={`w-[60px] lg:w-[310px] h-[450px] dark:bg-slate-900 bg-white bg-opacity-90 border dark:border-[#ffffff1d] border-[#ffffff0f] rounded-[5px] shadow-xl dark:shadow-sm mt-[80px] mb-[80px] sticky ${scroll ? "top-[120px] " : "top-[30px] "} left-[30px] `}>
-        
-//         <SideBarProfile
-//           user={user}
-//           active={active}
-//           avatar={avatar}
-//           setActive={setActive}
-//           logoutHandler={logoutHandler}
-//         />
-
-
-//       </div>
-//         {
-//         active === 1 && (
-//           <div className='w-full h-full bg-transparent mt-[80px] '>
-
-//             <ProfileInfo avatar={avatar} user={user} />
-//           </div>
-//           )
-//         }
-      
-//       {
-//         active === 2 && (
-//           <div className='w-full h-full bg-transparent mt-[80px] '>
-
-//             <ChangePassword avatar={avatar} user={user} />
-//           </div>
-//           )
-//       }
-
-// {
-//         active === 3 && (
-//           <div className='w-full h-full bg-transparent mt-[80px] '>
-
-//             <div className="w-full pl-7 px-2 lg:px-10 lg:pl-8">
-//               <div className="grid grid-cols-1 gap-[20px] md:grid-cols-2 md:gap-[25px] lg:grid-cols-2 lg:gap-[30px] xl:grid-cols-3 xl:gap-[35px] ">
-//                 {
-//                   courses && courses.map((item: any, index: number) => (
-//                     <CourseCard item={item} key={index} user={ user} isProfile={true} />
-//                   ))}
-//               </div>
-//               {courses.length === 0 && (
-//                 <h1 className='text-center text-[20px] font-Poppins'>
-//                   You don&apos;t have any purchased courses!
-//                 </h1>
-//               )}
-              
-//           </div>
-//           </div>
-//           )
-//       }
-      
-//     </div>
-//   )
-// }
-
-// export default Profile
