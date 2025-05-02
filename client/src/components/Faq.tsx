@@ -41,10 +41,13 @@ const FAQ = () => {
         <h1 className="text-3xl sm:text-4xl font-bold text-center text-gray-900 dark:text-white lg:mb-8 ">
           Frequently Asked  <ColourfulText text="Questions" /> 
         </h1>
-        <div className="w-full flex flex-col lg:flex-row justify-around  items-center ">
-          <GlobeDemo />
+        <div className="w-full flex flex-col lg:flex-row justify-evenly  items-center ">
+          <div className=' w-full lg:ml-20  '>
 
-        <div className="space-y-6 w-[55%] -ml-40 z-1">
+          <GlobeDemo />
+          </div>
+
+        <div className="space-y-6 lg:w-[40%]  lg:mr-20  z-1">
           {questions.map((q) => (
             <div 
               key={q._id}

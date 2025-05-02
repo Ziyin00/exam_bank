@@ -144,7 +144,7 @@ const AdminSideBar = () => {
             >
               {(!isCollapsed || isMobile) && (
                 <Link href="/" className="no-underline">
-                  <Typography variant="h4" className="font-Poppins uppercase" 
+                  <Typography variant="p" className="font-Poppins font-extrabold uppercase text-2xl " 
                     color="primary">
                     Exam Bank
                   </Typography>
@@ -175,7 +175,7 @@ const AdminSideBar = () => {
                   </Box>
                 </Box>
                 <Typography variant="h6" mt={2} color="text.primary">
-                  Khalid Hassan
+                  Khalid Sherefa
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Administrator
