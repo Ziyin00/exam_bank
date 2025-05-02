@@ -146,7 +146,7 @@ const AdminSideBar = () => {
                 <Link href="/" className="no-underline">
                   <Typography variant="h4" className="font-Poppins uppercase" 
                     color="primary">
-                    ELearning
+                    Exam Bank
                   </Typography>
                 </Link>
               )}
