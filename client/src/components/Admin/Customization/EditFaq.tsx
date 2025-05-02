@@ -1,156 +1,186 @@
-
 import { style } from "@/src/styles/style";
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { AiOutlineDelete } from "react-icons/ai";
 import { HiMinus, HiPlus } from "react-icons/hi";
 import { IoMdAddCircleOutline } from "react-icons/io";
+import { v4 as uuidv4 } from "uuid";
 
-type Props = {};
+interface Question {
+  id: string;
+  question: string;
+  answer: string;
+  active: boolean;
+}
 
-const EditFaq = (props: Props) => {
+interface EditFaqProps {
+  initialQuestions?: Question[];
+  onSave: (questions: Question[]) => Promise<void>;
+}
 
+const EditFaq = ({ initialQuestions = [], onSave }: EditFaqProps) => {
+  const [questions, setQuestions] = useState<Question[]>(() =>
+    initialQuestions.map(q => ({ ...q, id: q.id || uuidv4() }))
+  );
+  const [isSaving, setIsSaving] = useState(false);
 
-  const [questions, setQuestions] = useState<any[]>([]);
+  useEffect(() => {
+    if (initialQuestions.length === 0) {
+      newFaqHandler();
+    }
+  }, [initialQuestions]);
 
-
-  const toggleQuestion = (id: any) => {
-    setQuestions((prevQuestions) =>
-      prevQuestions.map((q) => (q._id === id ? { ...q, active: !q.active } : q))
+  const toggleQuestion = (id: string) => {
+    setQuestions(prev =>
+      prev.map(q => (q.id === id ? { ...q, active: !q.active } : q))
     );
   };
 
-  const handleQuestionChange = (id: any, value: string) => {
-    setQuestions((prevQuestions) =>
-      prevQuestions.map((q) => (q._id === id ? { ...q, question: value } : q))
+  const handleQuestionChange = (id: string, value: string) => {
+    setQuestions(prev =>
+      prev.map(q => (q.id === id ? { ...q, question: value } : q))
     );
   };
 
-  const handleAnswerChange = (id: any, value: string) => {
-    setQuestions((prevQuestions) =>
-      prevQuestions.map((q) => (q._id === id ? { ...q, answer: value } : q))
+  const handleAnswerChange = (id: string, value: string) => {
+    setQuestions(prev =>
+      prev.map(q => (q.id === id ? { ...q, answer: value } : q))
     );
   };
+
   const newFaqHandler = () => {
-    setQuestions([
-      ...questions,
+    setQuestions(prev => [
+      ...prev,
       {
-        questions: "",
+        id: uuidv4(),
+        question: "",
         answer: "",
+        active: true,
       },
     ]);
   };
 
-  const areQuestionsUnchanged = (
-    originalQuestions: any[],
-    newQuestions: any[]
-  ) => {
-    return JSON.stringify(originalQuestions) === JSON.stringify(newQuestions);
+  const deleteQuestion = (id: string) => {
+    if (questions.length === 1) {
+      toast.error("You must have at least one FAQ item");
+      return;
+    }
+    setQuestions(prev => prev.filter(q => q.id !== id));
   };
-  const isAnyQuestionEmpty = (questions: any[]) => {
-    return questions.some((q) => q.question === "" || q.answer === "");
+
+  const hasChanges = () => {
+    return JSON.stringify(initialQuestions) !== JSON.stringify(questions);
   };
-  const handleEdit = async () => {
-    if (
-      !areQuestionsUnchanged(data.layout.faq, questions) &&
-      !isAnyQuestionEmpty(questions)
-    ) {
-      await editLayout({
-        type: "FAQ",
-        faq: questions,
-      });
+
+  const hasEmptyFields = () => {
+    return questions.some(q => !q.question.trim() || !q.answer.trim());
+  };
+
+  const handleSave = async () => {
+    if (!hasChanges()) {
+      toast.error("No changes to save");
+      return;
+    }
+    if (hasEmptyFields()) {
+      toast.error("Please fill all question and answer fields");
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      await onSave(questions);
+      toast.success("FAQs saved successfully!");
+    } catch (error) {
+      toast.error("Failed to save FAQs");
+    } finally {
+      setIsSaving(false);
     }
   };
 
   return (
-    <>
-    
-        <div className="w-[90%] 800px:w-[80%]  m-auto mt-[120px]">
-          <div className="mt-12">
-            <dl className="space-y-8">
-              {questions.map((q: any) => (
-                <div
-                  key={q._id}
-                  className={`${
-                    q._id !== questions[0]?._id && "border-t"
-                  } border-gray-200 pt-6`}
-                >
-                  <dt className="text-lg">
-                    <button
-                      className="flex items-start dark:text-white text-black justify-between w-full text-left focus:outline-none"
-                      onClick={() => toggleQuestion(q._id)}
-                    >
-                      <input
-                        className={`${style.input} border-none`}
-                        value={q.question}
-                        onChange={(e: any) =>
-                          handleQuestionChange(q._id, e.target.value)
-                        }
-                        placeholder={"Add your question..."}
-                      />
-                      <span className="ml-6 flex-shrink-0">
-                        {q.active ? (
-                          <HiMinus className="h-6 w-6" />
-                        ) : (
-                          <HiPlus className="h-6 w-6" />
-                        )}
-                      </span>
-                    </button>
-                  </dt>
-                  {q.active && (
-                    <dd className="mt-2 pr-12">
-                      <input
-                        className={`${style.input} border-none`}
-                        value={q.answer}
-                        onChange={(e: any) =>
-                          handleAnswerChange(q._id, e.target.value)
-                        }
-                        placeholder={"Add your answer..."}
-                      />
-                      <span className="ml-6 flex-shrink-0">
-                        <AiOutlineDelete
-                          className="dark:text-white text-black text-[18px] cursor-pointer"
-                          onClick={() => {
-                            setQuestions((prevQuestions) =>
-                              prevQuestions.filter((item) => item.id !== q._id)
-                            );
-                          }}
-                        />
-                      </span>
-                    </dd>
-                  )}
+    <div className="w-[90%] 800px:w-[80%] m-auto mt-8 p-6 dark:bg-gray-800 bg-white rounded-lg shadow-lg">
+      <div className="space-y-6">
+        <h2 className="text-2xl font-bold text-center dark:text-white text-gray-800">
+          Manage FAQs
+        </h2>
+
+        <div className="space-y-4">
+          {questions.map((q) => (
+            <div
+              key={q.id}
+              className="border dark:border-gray-700 border-gray-200 rounded-lg p-4 transition-all"
+            >
+              <div className="flex items-center justify-between gap-4">
+                <input
+                  className={`${style.input} flex-1 border-none bg-transparent text-lg font-medium`}
+                  value={q.question}
+                  onChange={(e) => handleQuestionChange(q.id, e.target.value)}
+                  placeholder="Enter your question..."
+                  aria-label="Question"
+                />
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => toggleQuestion(q.id)}
+                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+                    aria-label={q.active ? "Collapse" : "Expand"}
+                  >
+                    {q.active ? (
+                      <HiMinus className="h-5 w-5" />
+                    ) : (
+                      <HiPlus className="h-5 w-5" />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => deleteQuestion(q.id)}
+                    className="p-2 text-red-500 hover:text-red-700"
+                    aria-label="Delete question"
+                  >
+                    <AiOutlineDelete className="h-5 w-5" />
+                  </button>
                 </div>
-              ))}
-            </dl>
-            <br />
-            <br />
-            <IoMdAddCircleOutline
-              className="dark:text-white text-black text-[25px] cursor-pointer"
-              onClick={newFaqHandler}
-            />
-          </div>
-          <div
-            className={`${
-              style.button
-            } !w-[100px] !min-h-[40px] dark:text-white text-black bg-[#cccccc34]
-                ${
-                  areQuestionsUnchanged(data.layout.faq, questions) ||
-                  isAnyQuestionEmpty(questions)
-                    ? "cursor-not-allowed"
-                    : "!cursor-pointer !bg-[#42d383]"
-                } !rounded absolute bottom-12 right-12
-                  `}
-            onClick={
-              areQuestionsUnchanged(data.layout.faq, questions) ||
-              isAnyQuestionEmpty(questions)
-                ? () => null
-                : handleEdit
-            }
-          >
-            Save
-          </div>
+              </div>
+
+              {q.active && (
+                <div className="mt-4 pl-2 border-l-4 border-blue-500">
+                  <textarea
+                    className={`${style.input} w-full border-none bg-transparent`}
+                    value={q.answer}
+                    onChange={(e) => handleAnswerChange(q.id, e.target.value)}
+                    placeholder="Enter your answer..."
+                    rows={3}
+                    aria-label="Answer"
+                  />
+                </div>
+              )}
+            </div>
+          ))}
         </div>
-    </>
+
+        <div className="flex items-center justify-between">
+          <button
+            onClick={newFaqHandler}
+            className="flex items-center gap-2 text-blue-500 hover:text-blue-700"
+            aria-label="Add new FAQ"
+          >
+            <IoMdAddCircleOutline className="h-6 w-6" />
+            <span className="font-medium">Add New FAQ</span>
+          </button>
+
+          <button
+            onClick={handleSave}
+            disabled={!hasChanges() || hasEmptyFields() || isSaving}
+            className={`${style.button} ${
+              (!hasChanges() || hasEmptyFields() || isSaving)
+                ? "bg-gray-300 dark:bg-gray-600 cursor-not-allowed"
+                : "bg-blue-500 hover:bg-blue-600"
+            } text-white px-6 py-2 rounded-lg transition-colors`}
+            aria-label="Save changes"
+          >
+            {isSaving ? "Saving..." : "Save Changes"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 };
 
