@@ -12,6 +12,7 @@ const { editCourse } = require('../controller/teachers/edit.cours')
 const { deleteCourse } = require('../controller/teachers/delete.cours')
 const { editExam } = require('../controller/teachers/edit.exam')
 const { deleteExam } = require('../controller/teachers/delete.exams')
+const { getAllQuestionsCount } = require('../controller/teachers/quation.count')
 
 const router = express.Router()
 
@@ -26,6 +27,7 @@ router.post('/post-exams', postExams)
 router.get('/get-comment', getAllComments)
 router.get('/get-QA/:id', getCourseQA)
 router.get('/get-exams', getAllExams)
+router.get('/get-quations-count', getAllQuestionsCount)  //this for count message    you accpt like this total
 
 // update profile/edit profile
 router.put('/edit-profile', updateTeacher)
