@@ -65,6 +65,7 @@ connection.getConnection((err) => {
             title VARCHAR(150) NOT NULL,
             course_tag VARCHAR(50),
             category_id INT,
+            department_id INT, 
             benefit1 TEXT,
             benefit2 TEXT,
             prerequisite1 TEXT,
@@ -73,6 +74,8 @@ connection.getConnection((err) => {
             description TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (category_id) REFERENCES categories(id)
+                ON DELETE SET NULL ON UPDATE CASCADE,
+            FOREIGN KEY (department_id) REFERENCES departments(id)
                 ON DELETE SET NULL ON UPDATE CASCADE
         );`,
 

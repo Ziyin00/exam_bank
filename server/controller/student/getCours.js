@@ -1,25 +1,26 @@
 const connection = require("../../db");
 
+const getCoursesByDepartment = async (req, res) => {
+    const departmentId = req.params.id;
 
-const getCoursesOnePerCategory = async (req, res) => {
-    const sql = `
-        SELECT c1.id, c1.image, c1.title, c1.description, c1.category_id
-        FROM courses c1
-        INNER JOIN (
-            SELECT MIN(id) as id
-            FROM courses
-            GROUP BY category_id
-        ) c2 ON c1.id = c2.id;
+    try {
+        const sql = `
+        SELECT id, title, description, image, category_id, department_id
+        FROM courses
+        WHERE department_id = ?
     `;
 
-    connection.query(sql, (err, results) => {
-        if (err) {
-            console.error("Error fetching courses:", err);
-            return res.status(500).json({ status: false, message: "Internal server error" });
-        }
+        connection.query(sql, [departmentId], (err, results) => {
+            if (err) {
+                console.error("Error fetching courses by department:", err);
+                return res.status(500).json({ status: false, message: "Internal server error" });
+            }
 
-        return res.status(200).json({ status: true, data: results });
-    });
+            return res.status(200).json({ status: true, data: results });
+        });
+    } catch (err) {
+        console.log(err.message)
+    }
 };
 
-module.exports = { getCoursesOnePerCategory };
+module.exports = { getCoursesByDepartment };
