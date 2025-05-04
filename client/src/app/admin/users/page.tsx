@@ -17,7 +17,7 @@ const page = (props: Props) => {
             <AdminSidebar />
             
         </div>
-        <div className='w-[85%] '>
+        <div className='w-[85%] -mt-[680px] '>
                       <DashboardHero />
             <AllUsers isTeam={false}  />
         </div>

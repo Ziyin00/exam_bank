@@ -108,7 +108,7 @@ const AllCourses = () => {
       headerName: 'Course Title', 
       flex: 2,
       renderCell: (params: any) => (
-        <div>
+        <div >
           <Typography fontWeight="600">{params.value}</Typography>
           <Chip 
             label={params.row.category}
@@ -121,18 +121,7 @@ const AllCourses = () => {
         </div>
       )
     },
-    { 
-      field: 'price', 
-      headerName: 'Price', 
-      flex: 0.5,
-      renderCell: (params: any) => (
-        <Chip 
-          label={`$${params.value}`}
-          color="success"
-          sx={{ fontWeight: 600 }}
-        />
-      )
-    },
+
     { 
       field: 'students', 
       headerName: 'Students', 
@@ -176,17 +165,8 @@ const AllCourses = () => {
       headerName: 'Actions',
       flex: 0.8,
       renderCell: (params: any) => (
-        <div className="flex items-center gap-2">
-          <Tooltip title="Preview">
-            <IconButton color="info" href={`/courses/${params.row.id}`}>
-              <AiOutlineEye />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Edit">
-            <IconButton color="primary" href={`/admin/edit-course/${params.row.id}`}>
-              <FiEdit2 />
-            </IconButton>
-          </Tooltip>
+        <div className="flex items-center gap-20">
+          
           <Tooltip title="Delete">
             <IconButton
               color="error"
@@ -269,7 +249,7 @@ const AllCourses = () => {
       </Typography>
       
       <Box sx={{ 
-        height: 700, 
+        height: 900, 
         width: '100%',
         '& .MuiDataGrid-root': {
           border: 'none',
@@ -297,6 +277,7 @@ const AllCourses = () => {
             '& .MuiDataGrid-cell:focus': { outline: 'none' },
             '& .MuiDataGrid-columnSeparator': { display: 'none' }
           }}
+          
         />
       </Box>
 

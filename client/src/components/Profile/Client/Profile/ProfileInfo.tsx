@@ -49,15 +49,15 @@ const ProfileInfo: React.FC<Props> = ({ user, avatar, onAvatarChange }) => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex-1 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 -z-1"
+      className="flex-1 bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8"
     >
-      <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-8">Profile Settings</h2>
+      <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">Profile Settings</h2>
 
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Avatar Section */}
         <div className="lg:w-1/3">
-          <div className="relative group mb-4">
-            <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-emerald-500">
+          <div className="relative group mb-4 z-0">
+            <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-indigo-500">
               <Image
                 src={avatar || avatarDefault}
                 alt="Profile"
@@ -65,7 +65,7 @@ const ProfileInfo: React.FC<Props> = ({ user, avatar, onAvatarChange }) => {
                 className="object-cover"
               />
             </div>
-            <label className="absolute bottom-0 right-0 bg-emerald-500 p-2 rounded-full cursor-pointer hover:bg-emerald-600 transition-colors">
+            <label className="absolute bottom-0 right-0 bg-indigo-500 p-2 rounded-full cursor-pointer hover:bg-indigo-600 transition-colors">
               <AiOutlineCamera className="text-white text-xl" />
               <input
                 type="file"
@@ -77,14 +77,14 @@ const ProfileInfo: React.FC<Props> = ({ user, avatar, onAvatarChange }) => {
           </div>
 
           <div className="space-y-2">
-            <div className="p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Enrolled Courses</p>
+            <div className="p-3 bg-indigo-50 dark:bg-gray-700 rounded-lg">
+              <p className="text-sm text-indigo-600 dark:text-indigo-300">Enrolled Courses</p>
               <p className="font-medium text-gray-800 dark:text-white">
                 {user?.courses?.length || 0}
               </p>
             </div>
-            <div className="p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Last Login</p>
+            <div className="p-3 bg-indigo-50 dark:bg-gray-700 rounded-lg">
+              <p className="text-sm text-indigo-600 dark:text-indigo-300">Last Login</p>
               <p className="font-medium text-gray-800 dark:text-white">
                 {new Date(user?.lastLogin || Date.now()).toLocaleString()}
               </p>
@@ -102,7 +102,7 @@ const ProfileInfo: React.FC<Props> = ({ user, avatar, onAvatarChange }) => {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+              className="w-full px-4 py-3 rounded-lg bg-indigo-50 dark:bg-gray-700 border border-indigo-100 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             />
           </div>
 
@@ -114,14 +114,14 @@ const ProfileInfo: React.FC<Props> = ({ user, avatar, onAvatarChange }) => {
               type="email"
               value={user?.email || ""}
               readOnly
-              className="w-full px-4 py-3 rounded-lg bg-gray-100 dark:bg-gray-600 cursor-not-allowed opacity-80"
+              className="w-full px-4 py-3 rounded-lg bg-indigo-50 dark:bg-gray-600 cursor-not-allowed opacity-80 -z-0"
             />
           </div>
 
           <button
             type="submit"
             disabled={isUpdating}
-            className="w-full bg-emerald-500 text-white py-3 px-6 rounded-lg font-medium hover:bg-emerald-600 transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
+            className="w-full bg-indigo-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-indigo-700 transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
           >
             {isUpdating ? (
               <>

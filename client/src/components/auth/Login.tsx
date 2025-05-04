@@ -1,117 +1,229 @@
 "use client";
-
-import React, { FC, useState } from "react";
+import React, { useState } from "react";
 import { useFormik } from "formik";
 import * as Yup from "yup";
-import {
-  AiOutlineEye,
-  AiOutlineEyeInvisible,
-} from "react-icons/ai";
-import toast, { Toaster } from 'react-hot-toast';
+import { AiOutlineEye, AiOutlineEyeInvisible, AiOutlineWarning } from "react-icons/ai";
+import { motion } from "framer-motion";
+import toast from "react-hot-toast";
+import Link from "next/link";
+import Image from "next/image";
+import { Loader2 } from "lucide-react";
 import axios from "axios";
-import { style } from "@/src/styles/style";
-
-type Props = {};
+import LearningGif from "../../../public/assets/login-gif.gif";
+import avatar from "../../../public/assets/avatar.jpg"
 
 const schema = Yup.object().shape({
-  email: Yup.string().email("Invalid email!").required("Please enter your email!"),
-  password: Yup.string().required("Please enter your password!").min(6),
+  email: Yup.string()
+    .email("Invalid email address")
+    .required("Email is required"),
+  password: Yup.string()
+    .min(8, "Password must be at least 8 characters")
+    .required("Password is required"),
 });
 
-const Login: FC<Props> = () => {
-  const [show, setShow] = useState(false);
+const Login = () => {
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const formik = useFormik({
     initialValues: { email: "", password: "" },
     validationSchema: schema,
-    onSubmit: async ({ email, password }) => {
+    onSubmit: async (values) => {
+      setIsLoading(true);
       try {
-        const res = await axios.post("http://localhost:3032/student/login", {
-          email,
-          password,
-        });
+        const res = await axios.post("http://localhost:3032/student/login", values);
 
         if (res.data.loginStatus) {
           toast.success("Login successful!");
-
-          //  Save token in localStorage/sessionStorage
           localStorage.setItem("s-token", res.data.token);
-
-
-          window.location.href = "";
+          window.location.href = "/Home";
         } else {
           toast.error(res.data.message || "Login failed!");
         }
       } catch (error) {
         toast.error("Something went wrong. Please try again.");
+        console.log(error)
+      } finally {
+        setIsLoading(false);
       }
     },
   });
 
-  const { errors, touched, values, handleChange, handleSubmit } = formik;
+  const loadDemoCredentials = () => {
+    formik.setValues({
+      email: "demo@exambank.com",
+      password: "demopassword123"
+    });
+    toast.success("Demo credentials loaded!");
+  };
 
   return (
-    <div className="w-full flex items-center justify-center h-[90vh] -mt-4">
-      <Toaster
-        position="top-center"
-        reverseOrder={false}
-      />
-      <div className="w-[500px] items-center bg-accent shadow-md rounded-lg p-5">
-        <h1 className={style.title}>Login to Exam Bank</h1>
-        <form onSubmit={handleSubmit}>
-          <label className={style.label} htmlFor="email">Enter your Email</label>
-          <input
-            type="email"
-            name="email"
-            value={values.email}
-            onChange={handleChange}
-            id="email"
-            placeholder="loginmail@gmail.com"
-            className={`${errors.email && touched.email && "border-red-500"} ${style.input}`}
-          />
-          {errors.email && touched.email && (
-            <span className="text-red-500 pt-2 block">{errors.email}</span>
-          )}
-
-          <label className={style.label} htmlFor="password">Enter your Password</label>
-          <div className="relative">
-            <input
-              type={show ? "text" : "password"}
-              name="password"
-              value={values.password}
-              onChange={handleChange}
-              id="password"
-              placeholder="password!@%"
-              className={`${errors.password && touched.password && "border-red-500"} ${style.input}`}
-            />
-            {show ? (
-              <AiOutlineEye
-                className="absolute right-3 top-3 cursor-pointer"
-                size={20}
-                onClick={() => setShow(false)}
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="w-full max-w-6xl bg-white rounded-2xl shadow-xl overflow-hidden grid grid-cols-1 md:grid-cols-2"
+      >
+        {/* Image Section */}
+        <div className="hidden md:block relative bg-gradient-to-br from-indigo-600 to-purple-600">
+          <div className="absolute inset-0 opacity-20 bg-[url('/grid.svg')]" />
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center"
+          >
+            <motion.div
+              initial={{ y: 20 }}
+              animate={{ y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="mb-8"
+            >
+              <Image
+                src={LearningGif}
+                alt="Online Learning"
+                width={400}
+                height={300}
+                className="mx-auto hover:scale-105 transition-transform duration-300 rounded-lg"
+                priority
               />
-            ) : (
-              <AiOutlineEyeInvisible
-                className="absolute right-3 top-3 cursor-pointer"
-                size={20}
-                onClick={() => setShow(true)}
-              />
-            )}
-          </div>
-          {errors.password && touched.password && (
-            <span className="text-red-500 pt-2 block">{errors.password}</span>
-          )}
+            </motion.div>
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-4xl font-bold text-white mb-4"
+            >
+              Unlock Your Potential
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="text-xl text-indigo-100 max-w-md"
+            >
+              Access thousands of practice exams and learning resources
+            </motion.p>
+          </motion.div>
+        </div>
 
-          <div className="w-full mt-5">
-            <input type="submit" value="Login" className={style.button} />
-          </div>
+        {/* Form Section */}
+        <div className="flex items-center justify-center p-8 bg-gradient-to-br from-indigo-50 to-purple-50">
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8"
+          >
+            <div className="text-center mb-8">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="mb-4 inline-block"
+              >
+                <Image
+                  src={avatar}
+                  alt="Exam Bank"
+                  width={80}
+                  height={80}
+                  className="mx-auto hover:rotate-[15deg] transition-transform duration-300"
+                />
+              </motion.div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back!</h1>
+              <p className="text-gray-500">Continue your learning journey</p>
+            </div>
 
-          <h5 className="text-center pt-4 text-[14px]">
-            Don&apos;t have an account?
-            <a href="/Signup" className="text-[#2190ff] pl-1">Sign Up</a>
-          </h5>
-        </form>
-      </div>
+            <form onSubmit={formik.handleSubmit} className="space-y-6">
+              {/* Email Input */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <input
+                    name="email"
+                    type="email"
+                    autoFocus
+                    value={formik.values.email}
+                    onChange={formik.handleChange}
+                    placeholder="student@exambank.com"
+                    className={`w-full px-4 py-3 rounded-lg border ${
+                      formik.errors.email && formik.touched.email
+                        ? "border-red-500 pr-10"
+                        : "border-gray-300"
+                    } focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all`}
+                  />
+                  {formik.errors.email && formik.touched.email && (
+                    <div className="absolute right-3 top-3.5 text-red-500">
+                      <AiOutlineWarning className="h-5 w-5" />
+                    </div>
+                  )}
+                </div>
+                {formik.errors.email && formik.touched.email && (
+                  <p className="mt-1 text-sm text-red-600">{formik.errors.email}</p>
+                )}
+              </div>
+
+              {/* Password Input */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    value={formik.values.password}
+                    onChange={formik.handleChange}
+                    placeholder="••••••••"
+                    className={`w-full px-4 py-3 rounded-lg border ${
+                      formik.errors.password && formik.touched.password
+                        ? "border-red-500 pr-10"
+                        : "border-gray-300"
+                    } focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-3.5 text-gray-400 hover:text-gray-500"
+                  >
+                    {showPassword ? (
+                      <AiOutlineEyeInvisible className="h-5 w-5" />
+                    ) : (
+                      <AiOutlineEye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+                {formik.errors.password && formik.touched.password && (
+                  <p className="mt-1 text-sm text-red-600">{formik.errors.password}</p>
+                )}
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center h-12 cursor-pointer"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  "Sign In"
+                )}
+              </button>
+
+              {/* Signup Link */}
+              <div className="text-center text-sm text-gray-500">
+                Don't have an account?{" "}
+                <Link
+                  href="/"
+                  className="font-medium text-indigo-600 hover:text-indigo-500 cursor-pointer"
+                >
+                  Sign up
+                </Link>
+              </div>
+
+            </form>
+          </motion.div>
+        </div>
+      </motion.div>
     </div>
   );
 };

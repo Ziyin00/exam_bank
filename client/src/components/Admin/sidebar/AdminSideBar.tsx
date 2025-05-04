@@ -21,6 +21,8 @@ import {
 } from "./Icons";
 import { Button } from "../../ui/button";
 import { GridCloseIcon, GridMenuIcon } from "@mui/x-data-grid";
+import { SiAnswer, SiCoursera } from "react-icons/si";
+import { PiExam } from "react-icons/pi";
 
 interface ItemProps {
   title: string;
@@ -175,7 +177,7 @@ const AdminSideBar = () => {
                   </Box>
                 </Box>
                 <Typography variant="h6" mt={2} color="text.primary">
-                  Khalid Sherefa
+                  Khalid Sherefu
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Administrator
@@ -232,7 +234,23 @@ const AdminSideBar = () => {
               <Item
                 title="Create Course"
                 to="/admin/create-course"
-                icon={<VideoCallIcon />}
+                icon={<SiCoursera />}
+                selected={selected}
+                setSelected={setSelected}
+              />
+
+<Item
+                title="Create Exam"
+                to="/admin/create-exam"
+                icon={<PiExam />}
+                selected={selected}
+                setSelected={setSelected}
+              />
+
+<Item
+                title="Answer Questions"
+                to="/admin/answer"
+                icon={<SiAnswer />}
                 selected={selected}
                 setSelected={setSelected}
               />
