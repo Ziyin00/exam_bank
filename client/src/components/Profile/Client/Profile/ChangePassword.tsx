@@ -78,10 +78,10 @@ const ChangePassword: React.FC<Props> = ({ user }) => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="w-full max-w-2xl mx-auto p-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg"
+      className="w-full max-w-2xl mx-auto p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-xl"
     >
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
+        <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
           Security Settings
         </h2>
         <p className="text-gray-500 dark:text-gray-400">
@@ -177,8 +177,8 @@ const ChangePassword: React.FC<Props> = ({ user }) => {
           whileTap={{ scale: 0.98 }}
           type="submit"
           disabled={isLoading}
-          className="w-full bg-emerald-500 text-white py-3 px-6 rounded-lg font-medium
-                    hover:bg-emerald-600 transition-colors disabled:opacity-70
+          className="w-full bg-indigo-600 text-white py-3 px-6 rounded-lg font-medium
+                    hover:bg-indigo-700 transition-colors disabled:opacity-70
                     disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {isLoading ? (

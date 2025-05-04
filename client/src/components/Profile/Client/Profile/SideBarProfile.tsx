@@ -29,7 +29,7 @@ const SideBarProfile: FC<Props> = ({
     {
       id: 1,
       icon: (
-        <div className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-emerald-500">
+        <div className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-indigo-500">
           <Image
             src={avatar || avatarDefault}
             alt="avatar"
@@ -68,10 +68,10 @@ const SideBarProfile: FC<Props> = ({
     <motion.div
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
-      className="w-full lg:w-[300px] bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 z-10"
+      className="w-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 z-50"
     >
       <div className="flex items-center gap-3 mb-6 p-2">
-        <div className="relative w-12 h-12 rounded-full border-2 border-emerald-500">
+        <div className="relative w-12 h-12 rounded-full border-2 border-indigo-500">
           <Image
             src={avatar || avatarDefault}
             alt={user?.name || "User avatar"}
@@ -101,7 +101,7 @@ const SideBarProfile: FC<Props> = ({
                 href={item.href}
                 className={`flex items-center gap-3 p-3 rounded-lg ${
                   active === item.id
-                    ? 'bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-100'
+                    ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-100'
                     : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                 }`}
               >
@@ -113,7 +113,7 @@ const SideBarProfile: FC<Props> = ({
                 onClick={item.action || (() => setActive(item.id))}
                 className={`w-full flex items-center gap-3 p-3 rounded-lg ${
                   active === item.id
-                    ? 'bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-100'
+                    ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-100'
                     : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                 }`}
                 disabled={item.id === 5 && isLoggingOut}

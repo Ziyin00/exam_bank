@@ -1,13 +1,10 @@
-// components/Course.tsx
 "use client";
 import React, { useState } from "react";
-// import { ColourfulText } from "./ui/colour-full-text";
 import { motion } from "framer-motion";
 import { slideInFromBottom } from "@/utils/motion";
 import { CardBody, CardContainer } from "./ui/3d-card";
 import Image from "next/image";
 
-// Course data structure
 type CourseType = {
   id: number;
   title: string;
@@ -63,7 +60,6 @@ const courses: CourseType[] = [
 
 const categories = ["all", "Computer Science", "Information Science", "Cyber Security"];
 
-// ThreeDCardDemo Component
 const ThreeDCardDemo = ({
   title,
   description,
@@ -77,11 +73,8 @@ const ThreeDCardDemo = ({
 }) => {
   return (
     <CardContainer className="inter-var w-full">
-      <motion.div
-        whileHover={{ scale: 1.05 }}
-        className="h-full"
-      >
-        <CardBody className="bg-gray-50 relative group/card dark:hover:shadow-2xl dark:hover:shadow-purple-500/[0.1] dark:bg-black dark:border-white/[0.2] border-black/[0.1] w-full h-full rounded-xl p-6 border">
+      <motion.div whileHover={{ scale: 1.05 }} className="h-full">
+        <CardBody className="bg-gray-50 relative group/card dark:hover:shadow-2xl dark:hover:shadow-indigo-500/[0.1] dark:bg-black dark:border-white/[0.2] border-black/[0.1] w-full h-full rounded-xl p-6 border">
           <div className="flex flex-col h-full">
             <Image
               src={image}
@@ -91,7 +84,7 @@ const ThreeDCardDemo = ({
               alt={title}
             />
             <div className="mt-4 flex-1">
-              <div className="text-purple-600 dark:text-purple-400 text-sm font-medium">
+              <div className="text-indigo-600 dark:text-indigo-400 text-sm font-medium">
                 {category}
               </div>
               <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
@@ -101,11 +94,8 @@ const ThreeDCardDemo = ({
                 {description}
               </p>
             </div>
-            <button className="mt-4 w-full bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-lg transition-colors">
-              <a href="/ClientCourse">
-              
-              Work Sheets
-              </a>
+            <button className="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-lg transition-colors">
+              <a href="/ClientCourse">Work Sheets</a>
             </button>
           </div>
         </CardBody>
@@ -114,7 +104,6 @@ const ThreeDCardDemo = ({
   );
 };
 
-// Main Course Component
 const Course = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
 
@@ -129,7 +118,6 @@ const Course = () => {
         With Our Courses
       </h1>
 
-      {/* Category Filters */}
       <motion.div 
         initial="hidden"
         animate="visible"
@@ -142,8 +130,8 @@ const Course = () => {
             onClick={() => setSelectedCategory(category)}
             className={`px-6 py-2 rounded-full border-2 transition-all duration-300 ${
               selectedCategory === category
-                ? "border-purple-600 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400"
-                : "border-gray-300 hover:border-purple-400 text-gray-600 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400"
+                ? "border-indigo-600 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
+                : "border-gray-300 hover:border-indigo-400 text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400"
             }`}
           >
             {category.charAt(0).toUpperCase() + category.slice(1)}
@@ -151,7 +139,6 @@ const Course = () => {
         ))}
       </motion.div>
 
-      {/* Course Grid */}
       <motion.div
         initial="hidden"
         animate="visible"
@@ -173,7 +160,6 @@ const Course = () => {
         ))}
       </motion.div>
 
-      {/* Empty State */}
       {filteredCourses.length === 0 && (
         <motion.div
           initial={{ opacity: 0 }}
@@ -189,10 +175,9 @@ const Course = () => {
 
 export default Course;
 
-// components/ui/colour-full-text.tsx
 export const ColourfulText = ({ text }: { text: string }) => {
   return (
-    <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+    <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
       {text}
     </span>
   );

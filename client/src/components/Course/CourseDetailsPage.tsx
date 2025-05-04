@@ -160,7 +160,7 @@ const CourseDetailsPage = () => {
       {/* Tabs Navigation */}
       <div className="border-b border-gray-200 dark:border-gray-700">
         <nav className="flex gap-4">
-          {['content', 'qna', 'reviews', 'assignments', 'notes'].map((tab) => (
+          {['content', 'qna', 'reviews', 'notes'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -177,7 +177,7 @@ const CourseDetailsPage = () => {
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'content' && <CourseContentList />}
+      {/* {activeTab === 'content' && <CourseContentList />} */}
 
       {activeTab === 'qna' && (
         <div className="space-y-6">
@@ -325,7 +325,7 @@ const CourseDetailsPage = () => {
         </div>
       )}
 
-      {activeTab === 'assignments' && (
+      {/* {activeTab === 'assignments' && (
         <div className="space-y-6">
           <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg">
             <h3 className="text-lg font-semibold mb-4 dark:text-white">Current Assignment</h3>
@@ -362,7 +362,7 @@ const CourseDetailsPage = () => {
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
       {activeTab === 'notes' && (
         <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg">

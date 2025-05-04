@@ -1,5 +1,5 @@
-import { style } from "@/styles/style"; 
 // import { useActivationMutation } from "@/redux/features/auth/authApi";
+import { style } from "@/src/styles/style";
 import React, { FC, useEffect, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import { VscWorkspaceTrusted } from "react-icons/vsc";

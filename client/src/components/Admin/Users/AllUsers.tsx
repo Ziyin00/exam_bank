@@ -272,7 +272,7 @@ const AllUsers: FC<Props> = ({ isTeam }) => {
               InputLabelProps={{ className: "dark:text-gray-300" }}
               InputProps={{ className: "dark:text-white" }}
             />
-            <FormControl fullWidth className="mb-6">
+            <FormControl fullWidth className="!my-6">
               <InputLabel className="dark:text-gray-300">Role</InputLabel>
               <Select
                 value={role}
