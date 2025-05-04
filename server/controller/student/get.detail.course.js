@@ -23,14 +23,13 @@ const getDetailCours = async (req, res) => {
             }
 
 
-            console.log(categoryId)
 
             const getCoursesQuery = `
                 SELECT id, title, description, image, category_id
                 FROM courses
                 WHERE category_id = ?
             `;
-            connection.query(getCoursesQuery, [categoryId], (err, courses) => {
+            connection.query(getCoursesQuery, [id], (err, courses) => {
                 if (err) {
                     console.error(err);
                     return res.status(500).json({ status: false, message: "Error fetching related courses" });

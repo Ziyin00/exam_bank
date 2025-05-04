@@ -21,14 +21,17 @@ const addCourse = [upload.single('image'), async (req, res) => {
         title,
         course_tag,
         category_id,
+        department_id,
         benefit1,
         benefit2,
         prerequisite1,
         prerequisite2,
-        image,
         description,
-        links // expected as an array of objects: [{ link_name: "...", link: "..." }]
+        links
     } = req.body;
+
+    // Handle image from multer
+    const image = req.file ? req.file.filename : null;
 
     try {
         const checkQuery = 'SELECT * FROM courses WHERE title = ?';
@@ -43,19 +46,21 @@ const addCourse = [upload.single('image'), async (req, res) => {
             }
 
             const insertQuery = `
-                INSERT INTO courses (title, course_tag, category_id, benefit1, benefit2, prerequisite1, prerequisite2, image, description)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+                INSERT INTO courses (title, course_tag, category_id,department_id,benefit1, benefit2, prerequisite1, prerequisite2, image, description)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `;
 
             const values = [
                 title,
                 course_tag,
                 category_id,
+                department_id,
                 benefit1,
                 benefit2,
                 prerequisite1,
                 prerequisite2,
                 image,
-                description
+                description,
             ];
 
             connection.query(insertQuery, values, (err, result) => {
@@ -66,7 +71,7 @@ const addCourse = [upload.single('image'), async (req, res) => {
 
                 const courseId = result.insertId;
 
-                // Insert multiple links (if any)
+                // Insert links
                 if (Array.isArray(links) && links.length > 0) {
                     const linkValues = links.map(link => [courseId, link.link_name, link.link]);
                     const linkQuery = `INSERT INTO course_links (course_id, link_name, link) VALUES ?`;
@@ -88,6 +93,7 @@ const addCourse = [upload.single('image'), async (req, res) => {
         console.error(err);
         return res.status(500).json({ status: false, message: 'Server error' });
     }
-}]
+}];
+
 
 module.exports = { addCourse };
