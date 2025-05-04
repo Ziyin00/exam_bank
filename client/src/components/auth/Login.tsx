@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { AiOutlineEye, AiOutlineEyeInvisible, AiOutlineWarning } from "react-icons/ai";
@@ -10,14 +10,16 @@ import Image from "next/image";
 import { Loader2 } from "lucide-react";
 import axios from "axios";
 import LearningGif from "../../../public/assets/login-gif.gif";
-import avatar from "../../../public/assets/avatar.jpg"
+import avatar from "../../../public/assets/avatar.jpg";
 
-const schema = Yup.object().shape({
+const validationSchema = Yup.object().shape({
   email: Yup.string()
     .email("Invalid email address")
-    .required("Email is required"),
+    .required("Email is required")
+    .matches(/@[a-zA-Z0-9-]+\.[a-zA-Z]{2,}$/, "Invalid email format"),
   password: Yup.string()
-    .min(8, "Password must be at least 8 characters")
+    .min(6, "Password must be at least 6 characters")
+
     .required("Password is required"),
 });
 
@@ -25,37 +27,44 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  const handleSubmit = useCallback(async (values: { email: string; password: string }) => {
+    setIsLoading(true);
+    try {
+      const { data } = await axios.post("http://localhost:3032/student/login", values, {
+        timeout: 10000,
+      });
+
+      if (data?.loginStatus) {
+        toast.success("Login successful!");
+        localStorage.setItem("s-token", data.token);
+        window.location.href = "/Home";
+      } else {
+        toast.error(data?.message || "Authentication failed");
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Connection error. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const formik = useFormik({
     initialValues: { email: "", password: "" },
-    validationSchema: schema,
-    onSubmit: async (values) => {
-      setIsLoading(true);
-      try {
-        const res = await axios.post("http://localhost:3032/student/login", values);
-
-        if (res.data.loginStatus) {
-          toast.success("Login successful!");
-          localStorage.setItem("s-token", res.data.token);
-          window.location.href = "/Home";
-        } else {
-          toast.error(res.data.message || "Login failed!");
-        }
-      } catch (error) {
-        toast.error("Something went wrong. Please try again.");
-        console.log(error)
-      } finally {
-        setIsLoading(false);
-      }
-    },
+    validationSchema,
+    onSubmit: handleSubmit,
   });
 
-  const loadDemoCredentials = () => {
+  const loadDemoCredentials = useCallback(() => {
     formik.setValues({
       email: "demo@exambank.com",
-      password: "demopassword123"
+      password: "Demo@12345" // Stronger demo password
     });
     toast.success("Demo credentials loaded!");
-  };
+  }, [formik.setValues]);
+
+  const togglePasswordVisibility = useCallback(() => {
+    setShowPassword(prev => !prev);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center p-4">
@@ -78,14 +87,15 @@ const Login = () => {
               transition={{ delay: 0.2 }}
               className="mb-8"
             >
-              <Image
+              {/* <Image
                 src={LearningGif}
                 alt="Online Learning"
                 width={400}
                 height={300}
                 className="mx-auto hover:scale-105 transition-transform duration-300 rounded-lg"
                 priority
-              />
+                placeholder="blur"
+              /> */}
             </motion.div>
             <motion.h2
               initial={{ opacity: 0, y: 20 }}
@@ -124,6 +134,7 @@ const Login = () => {
                   width={80}
                   height={80}
                   className="mx-auto hover:rotate-[15deg] transition-transform duration-300"
+                  placeholder="blur"
                 />
               </motion.div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back!</h1>
@@ -131,7 +142,6 @@ const Login = () => {
             </div>
 
             <form onSubmit={formik.handleSubmit} className="space-y-6">
-              {/* Email Input */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Email Address
@@ -143,12 +153,14 @@ const Login = () => {
                     autoFocus
                     value={formik.values.email}
                     onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
                     placeholder="student@exambank.com"
                     className={`w-full px-4 py-3 rounded-lg border ${
                       formik.errors.email && formik.touched.email
                         ? "border-red-500 pr-10"
                         : "border-gray-300"
                     } focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all`}
+                    disabled={isLoading}
                   />
                   {formik.errors.email && formik.touched.email && (
                     <div className="absolute right-3 top-3.5 text-red-500">
@@ -161,7 +173,6 @@ const Login = () => {
                 )}
               </div>
 
-              {/* Password Input */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Password
@@ -172,17 +183,20 @@ const Login = () => {
                     type={showPassword ? "text" : "password"}
                     value={formik.values.password}
                     onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
                     placeholder="••••••••"
                     className={`w-full px-4 py-3 rounded-lg border ${
                       formik.errors.password && formik.touched.password
                         ? "border-red-500 pr-10"
                         : "border-gray-300"
                     } focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all`}
+                    disabled={isLoading}
                   />
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
+                    onClick={togglePasswordVisibility}
                     className="absolute right-3 top-3.5 text-gray-400 hover:text-gray-500"
+                    disabled={isLoading}
                   >
                     {showPassword ? (
                       <AiOutlineEyeInvisible className="h-5 w-5" />
@@ -196,11 +210,27 @@ const Login = () => {
                 )}
               </div>
 
-              {/* Submit Button */}
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={loadDemoCredentials}
+                  className="text-sm text-indigo-600 hover:text-indigo-500 font-medium"
+                  disabled={isLoading}
+                >
+                  Load Demo Credentials
+                </button>
+                <Link
+                  href="/forgot-password"
+                  className="text-sm text-gray-600 hover:text-gray-800"
+                >
+                  Forgot Password?
+                </Link>
+              </div>
+
               <button
                 type="submit"
-                disabled={isLoading}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center h-12 cursor-pointer"
+                disabled={isLoading || !formik.isValid}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center h-12 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
@@ -209,17 +239,15 @@ const Login = () => {
                 )}
               </button>
 
-              {/* Signup Link */}
               <div className="text-center text-sm text-gray-500">
                 Don't have an account?{" "}
                 <Link
-                  href="/"
-                  className="font-medium text-indigo-600 hover:text-indigo-500 cursor-pointer"
+                  href="/Signup"
+                  className="font-medium text-indigo-600 hover:text-indigo-500"
                 >
                   Sign up
                 </Link>
               </div>
-
             </form>
           </motion.div>
         </div>

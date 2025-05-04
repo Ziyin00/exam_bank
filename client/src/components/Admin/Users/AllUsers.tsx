@@ -1,336 +1,347 @@
 "use client";
 
 import React, { FC, useEffect, useState } from "react";
-import { DataGrid, GridColDef } from "@mui/x-data-grid";
-import { Box, Button, Modal, TextField, Typography, Skeleton, Avatar, FormControl, InputLabel, Select, MenuItem } from "@mui/material";
-import { AiOutlineDelete, AiOutlineMail, AiOutlineUserAdd } from "react-icons/ai";
+import { DataGrid, GridColDef, GridPaginationModel } from "@mui/x-data-grid";
+import { Box, Button, Modal, TextField, Typography, Skeleton, Avatar, FormControl, InputLabel, Select, MenuItem, Chip } from "@mui/material";
+import { AiOutlineDelete, AiOutlineMail, AiOutlineUserAdd, AiOutlineEdit } from "react-icons/ai";
 import { useTheme } from "next-themes";
 import { format } from "timeago.js";
 import toast from "react-hot-toast";
+import axios from "axios";
 
-// Demo data
-const demoUsers = [
-  {
-    _id: "1",
-    name: "John Doe",
-    email: "john@example.com",
-    role: "admin",
-    courses: [
-      { _id: "c1", name: "Web Development" },
-      { _id: "c2", name: "JavaScript Fundamentals" }
-    ],
-    createdAt: "2024-01-01"
-  },
-  {
-    _id: "2",
-    name: "Jane Smith",
-    email: "jane@example.com",
-    role: "user",
-    courses: [{ _id: "c1", name: "Web Development" }],
-    createdAt: "2024-02-15"
-  },
-  {
-    _id: "3",
-    name: "Bob Johnson",
-    email: "bob@example.com",
-    role: "user",
-    courses: [],
-    createdAt: "2024-03-10"
-  }
-];
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+  avatar?: string;
+  createdAt: string;
+}
 
-type Props = {
-  isTeam: boolean;
-};
+interface Department {
+  id: string;
+  department_name: string;
+}
 
-const AllUsers: FC<Props> = ({ isTeam }) => {
+const AllUsers: FC<{ isTeam: boolean }> = ({ isTeam }) => {
   const { theme } = useTheme();
-  const [active, setActive] = useState(false);
-  const [email, setEmail] = useState("");
-  const [role, setRole] = useState("admin");
-  const [open, setOpen] = useState(false);
-  const [userId, setUserId] = useState("");
+  const [openModal, setOpenModal] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [users, setUsers] = useState(demoUsers);
+  const [users, setUsers] = useState<User[]>([]);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
+    page: 0,
+    pageSize: 10,
+  });
+  const [formData, setFormData] = useState({
+    email: "",
+    role: "teacher",
+    department: "",
+  });
+  const [departments, setDepartments] = useState<Department[]>([]);
 
+
+
+
+  // Fetch users and departments
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, []);
+    const fetchData = async () => {
+      try {
+        const [usersRes, departmentsRes] = await Promise.all([
+          axios.get(process.env.NEXT_PUBLIC_ADMIN_GET_ACCOUNTS_API || "", {
+            params: {
+              page: paginationModel.page + 1,
+              limit: paginationModel.pageSize,
+              role: isTeam ? "admin" : undefined,
+            },
+          }),
+          axios.get(process.env.NEXT_PUBLIC_ADMIN_GET_DEPARTMENTS_API || ""),
+        ]);
 
-  const filteredUsers = isTeam
-    ? users.filter(user => user.role === "admin")
-    : users;
-
-  const rows = filteredUsers.map(user => ({
-    id: user._id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-    courses: user.courses.length,
-    created_at: format(user.createdAt)
-  }));
-
-  const handleSubmit = () => {
-    if (!email || !role) {
-      toast.error("Please fill all fields");
-      return;
-    }
-
-    const newUser = {
-      _id: String(users.length + 1),
-      name: "New User",
-      email,
-      role,
-      courses: [],
-      createdAt: new Date().toISOString()
+        setUsers(usersRes.data.users);
+        setTotalUsers(usersRes.data.total);
+        setDepartments(departmentsRes.data);
+      } catch (error) {
+        toast.error("Error loading data");
+      } finally {
+        setLoading(false);
+      }
     };
 
-    setUsers([...users, newUser]);
-    setActive(false);
-    toast.success("User added successfully!");
+    fetchData();
+  }, [paginationModel, isTeam]);
+
+
+  // Handle user creation
+  const handleCreateUser = async () => {
+    try {
+      const endpoint = formData.role === "admin" 
+        ? process.env.NEXT_PUBLIC_ADMIN_ADD_ACCOUNT_API
+        : process.env.NEXT_PUBLIC_ADMIN_ADD_TEACHERS_API;
+
+      const response = await axios.post(endpoint!, {
+        ...formData,
+        sendInvitation: true,
+      });
+
+      if (response.status === 201) {
+        toast.success("Invitation sent successfully");
+        setOpenModal(false);
+        setFormData({ email: "", role: "teacher", department: "" });
+        const res = await axios.get(process.env.NEXT_PUBLIC_ADMIN_GET_ACCOUNTS_API || "");
+        setUsers(res.data.users);
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to create user");
+    }
   };
 
-  const handleDelete = () => {
-    setUsers(users.filter(user => user._id !== userId));
-    setOpen(false);
-    toast.success("User deleted successfully!");
+  // Handle user deletion
+
+  const handleDeleteUser = async () => {
+    if (!selectedUser) return;
+
+    try {
+      const endpoint = selectedUser.role === "teacher"
+        ? process.env.NEXT_PUBLIC_ADMIN_DELETE_TEACHER_API
+        : process.env.NEXT_PUBLIC_ADMIN_DELETE_STUDENT_API;
+
+      await axios.delete(`${endpoint}/${selectedUser.id}`);
+      setUsers(users.filter(user => user.id !== selectedUser.id));
+      toast.success("User deleted successfully");
+      setDeleteOpen(false);
+    } catch (error) {
+      toast.error("Failed to delete user");
+    }
   };
 
+
+  const handleStatusChange = async (userId: string, newStatus: string) => {
+    try {
+      const user = users.find(u => u.id === userId);
+      const endpoint = user?.role === "teacher"
+        ? process.env.NEXT_PUBLIC_ADMIN_UPDATE_TEACHER_API
+        : process.env.NEXT_PUBLIC_ADMIN_UPDATE_STUDENT_API;
+
+      await axios.put(`${endpoint}/${userId}`, { status: newStatus });
+      setUsers(users.map(u => u.id === userId ? { ...u, status: newStatus } : u));
+      toast.success("Status updated successfully");
+    } catch (error) {
+      toast.error("Failed to update status");
+    }
+  };
+
+  // Table columns configuration
   const columns: GridColDef[] = [
-    { 
-      field: "id", 
-      headerName: "ID", 
+    {
+      field: "id",
+      headerName: "ID",
       flex: 0.3,
-      renderCell: (params) => <span className="font-mono">#{params.value}</span>
+      renderCell: params => <span className="font-mono">#{params.value}</span>,
     },
-    { 
-      field: "name", 
-      headerName: "Name", 
+    {
+      field: "name",
+      headerName: "User",
       flex: 0.5,
-      renderCell: (params) => (
+      renderCell: params => (
         <div className="flex items-center gap-3">
-          <Avatar className="bg-blue-500">{params.value[0]}</Avatar>
-          {params.value}
+          <Avatar src={params.row.avatar} className="bg-blue-500">
+            {params.row.name[0]}
+          </Avatar>
+          <div>
+            <p>{params.row.name}</p>
+            <p className="text-xs text-gray-500">{params.row.email}</p>
+          </div>
         </div>
-      )
+      ),
     },
-    { 
-      field: "email", 
-      headerName: "Email", 
-      flex: 0.7,
-      renderCell: (params) => (
-        <a 
-          href={`mailto:${params.value}`}
-          className="hover:text-blue-500 transition-colors"
+    {
+      field: "role",
+      headerName: "Role",
+      flex: 0.3,
+      renderCell: params => (
+        <Chip
+          label={params.value}
+          color={params.value === "admin" ? "primary" : "default"}
+          className="capitalize"
+        />
+      ),
+    },
+    {
+      field: "status",
+      headerName: "Status",
+      flex: 0.3,
+      renderCell: params => (
+        <Select
+          value={params.value}
+          onChange={e => handleStatusChange(params.row.id, e.target.value)}
+          className="w-32"
+          size="small"
         >
-          {params.value}
-        </a>
-      )
+          <MenuItem value="active">Active</MenuItem>
+          <MenuItem value="inactive">Inactive</MenuItem>
+          <MenuItem value="suspended">Suspended</MenuItem>
+        </Select>
+      ),
     },
-    { 
-      field: "role", 
-      headerName: "Role", 
+    {
+      field: "createdAt",
+      headerName: "Joined",
       flex: 0.4,
-      renderCell: (params) => (
-        <span className={`px-3 py-1 rounded-full ${
-          params.value === 'admin' 
-            ? 'bg-purple-100 text-purple-800' 
-            : 'bg-green-100 text-green-800'
-        }`}>
-          {params.value}
-        </span>
-      )
-    },
-    { 
-      field: "courses", 
-      headerName: "Courses", 
-      flex: 0.4,
-      renderCell: (params) => (
-        <span className="px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-full">
-          {params.value}
-        </span>
-      )
-    },
-    { 
-      field: "created_at", 
-      headerName: "Joined", 
-      flex: 0.5,
-      renderCell: (params) => (
-        <div className="flex flex-col">
-          <span>{new Date(params.row.createdAt).toLocaleDateString()}</span>
-          <span className="text-xs text-gray-500">{params.value}</span>
-        </div>
-      )
+      valueFormatter: params => format(params.value),
     },
     {
       field: "actions",
       headerName: "Actions",
-      flex: 0.3,
-      renderCell: (params) => (
-        <div className="flex gap-3">
+      flex: 0.4,
+      renderCell: params => (
+        <div className="flex gap-2">
           <Button
             onClick={() => {
-              setOpen(true);
-              setUserId(params.row.id);
+              setDeleteOpen(true);
+              setSelectedUser(params.row.id);
             }}
-            className="hover:bg-red-100 dark:hover:bg-gray-700 p-2 rounded-full"
+            color="error"
           >
-            <AiOutlineDelete className="text-red-500" size={20} />
+            <AiOutlineDelete />
           </Button>
-          <a 
+          <Button color="primary">
+            <AiOutlineEdit />
+          </Button>
+          <Button 
             href={`mailto:${params.row.email}`}
-            className="hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded-full"
+            color="info"
           >
-            <AiOutlineMail className="text-blue-500" size={20} />
-          </a>
+            <AiOutlineMail />
+          </Button>
         </div>
-      )
-    }
+      ),
+    },
   ];
 
   return (
-    <div className="">
-      <Box m="20px">
-        <div className="w-full flex justify-between items-center mb-6">
-          <Typography variant="h4" className="dark:text-white text-black">
-            {isTeam ? "Team Members" : "All Users"}
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AiOutlineUserAdd />}
-            onClick={() => setActive(true)}
-            className="!bg-blue-500 !hover:bg-blue-600 !text-white"
-          >
-            Add New Member
-          </Button>
-        </div>
-
-        <Box
-          height="75vh"
-          sx={{
-            "& .MuiDataGrid-root": { border: "none" },
-            "& .MuiDataGrid-columnHeaders": {
-              backgroundColor: theme === "dark" ? "#374151" : "#E5E7EB",
-              color: theme === "dark" ? "#FFF" : "#1F2937",
-              fontSize: '0.875rem',
-            },
-            "& .MuiDataGrid-row": {
-              color: theme === "dark" ? "#FFF" : "#1F2937",
-              '&:hover': {
-                backgroundColor: theme === "dark" ? '#1F2937' : '#F3F4F6',
-              }
-            },
-            "& .MuiDataGrid-virtualScroller": {
-              backgroundColor: theme === "dark" ? "#1F2937" : "#F9FAFB",
-            },
-            "& .MuiDataGrid-footerContainer": {
-              backgroundColor: theme === "dark" ? "#374151" : "#E5E7EB",
-              color: theme === "dark" ? "#FFF" : "#1F2937",
-            },
-          }}
+    <Box m="20px">
+      <div className="flex justify-between items-center mb-6">
+        <Typography variant="h4" className="dark:text-white">
+          {isTeam ? "Team Management" : "User Management"}
+        </Typography>
+        <Button
+          variant="contained"
+          startIcon={<AiOutlineUserAdd />}
+          onClick={() => setOpenModal(true)}
         >
-          {loading ? (
-            <div className="space-y-4 p-4">
-              {[...Array(5)].map((_, i) => (
-                <Skeleton 
-                  key={i}
-                  variant="rectangular" 
-                  height={60} 
-                  className="rounded-lg bg-opacity-20 dark:bg-gray-700 bg-gray-300"
-                />
-              ))}
-            </div>
-          ) : (
-            <DataGrid
-              rows={rows}
-              columns={columns}
-              pageSizeOptions={[5, 10, 25]}
-              initialState={{
-                pagination: { paginationModel: { pageSize: 10 } },
-              }}
-              disableRowSelectionOnClick
-            />
-          )}
-        </Box>
+          Add {isTeam ? "Team Member" : "User"}
+        </Button>
+      </div>
 
-        {/* Add Member Modal */}
-        <Modal open={active} onClose={() => setActive(false)}>
-          <Box className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 p-6 rounded-xl w-[90%] max-w-md">
-            <Typography variant="h5" className="text-center mb-6 font-bold dark:text-white">
-              Add Team Member
-            </Typography>
-            <TextField
-              fullWidth
-              label="Email"
-              variant="outlined"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mb-4"
-              InputLabelProps={{ className: "dark:text-gray-300" }}
-              InputProps={{ className: "dark:text-white" }}
-            />
-            <FormControl fullWidth className="!my-6">
-              <InputLabel className="dark:text-gray-300">Role</InputLabel>
-              <Select
-                value={role}
-                label="Role"
-                onChange={(e) => setRole(e.target.value)}
-                className="dark:text-white"
-              >
-                <MenuItem value="admin">Admin</MenuItem>
-                <MenuItem value="user">User</MenuItem>
-              </Select>
-            </FormControl>
-            <div className="flex justify-end gap-3">
-              <Button 
-                onClick={() => setActive(false)}
-                className="!text-gray-600 dark:!text-gray-300"
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="contained"
-                onClick={handleSubmit}
-                className="!bg-blue-500 !hover:bg-blue-600"
-              >
-                Add Member
-              </Button>
-            </div>
-          </Box>
-        </Modal>
-
-        {/* Delete Confirmation Modal */}
-        <Modal open={open} onClose={() => setOpen(false)}>
-          <Box className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 p-6 rounded-xl w-[90%] max-w-md">
-            <Typography variant="h5" className="text-center mb-6 font-bold dark:text-white">
-              Confirm Deletion
-            </Typography>
-            <Typography className="text-center mb-6 dark:text-gray-300">
-              Are you sure you want to delete this user? This action cannot be undone.
-            </Typography>
-            <div className="flex justify-center gap-4">
-              <Button
-                variant="outlined"
-                onClick={() => setOpen(false)}
-                className="!border-gray-400 !text-gray-600 dark:!text-gray-300"
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="contained"
-                onClick={handleDelete}
-                className="!bg-red-500 !hover:bg-red-600"
-              >
-                Delete User
-              </Button>
-            </div>
-          </Box>
-        </Modal>
+      <Box height="75vh" sx={{
+        "& .MuiDataGrid-root": { border: "none" },
+        "& .MuiDataGrid-columnHeaders": {
+          backgroundColor: theme === "dark" ? "#374151" : "#E5E7EB",
+          color: theme === "dark" ? "#FFF" : "#1F2937",
+        },
+        "& .MuiDataGrid-row": {
+          color: theme === "dark" ? "#FFF" : "#1F2937",
+          '&:hover': {
+            backgroundColor: theme === "dark" ? '#1F2937' : '#F3F4F6',
+          }
+        },
+      }}>
+        <DataGrid
+          rows={users}
+          columns={columns}
+          loading={loading}
+          pageSizeOptions={[5, 10, 25]}
+          paginationModel={paginationModel}
+          onPaginationModelChange={setPaginationModel}
+          rowCount={totalUsers}
+          paginationMode="server"
+          disableRowSelectionOnClick
+        />
       </Box>
-    </div>
+
+      {/* Add User Modal */}
+      <Modal open={openModal} onClose={() => setOpenModal(false)}>
+        <Box className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 p-6 rounded-xl w-[90%] max-w-md">
+          <Typography variant="h5" className="text-center !mb-6 font-bold dark:text-white">
+            Invite New User
+          </Typography>
+          
+          <TextField
+            fullWidth
+            label="Email"
+            variant="outlined"
+            value={formData.email}
+            onChange={e => setFormData({ ...formData, email: e.target.value })}
+            className="mb-4"
+          />
+
+          <FormControl fullWidth className="!my-4">
+            <InputLabel>Role</InputLabel>
+            <Select
+              value={formData.role}
+              label="Role"
+              onChange={e => setFormData({ ...formData, role: e.target.value })}
+            >
+              <MenuItem value="admin">Admin</MenuItem>
+              <MenuItem value="teacher">Teacher</MenuItem>
+              <MenuItem value="student">Student</MenuItem>
+            </Select>
+          </FormControl>
+
+          <FormControl fullWidth className="mb-6">
+            <InputLabel>Department</InputLabel>
+            <Select
+              value={formData.department}
+              label="Department"
+              onChange={e => setFormData({ ...formData, department: e.target.value })}
+            >
+              {departments && departments.map(dept => (
+                <MenuItem key={dept.id} value={dept.id}>
+                  {dept.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <div className="flex justify-end gap-3 !mt-5">
+            <Button onClick={() => setOpenModal(false)}>Cancel</Button>
+            <Button
+              variant="contained"
+              onClick={handleCreateUser}
+              disabled={!formData.email}
+            >
+              Send Invitation
+            </Button>
+          </div>
+        </Box>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal open={deleteOpen} onClose={() => setDeleteOpen(false)}>
+        <Box className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 p-6 rounded-xl w-[90%] max-w-md">
+          <Typography variant="h5" className="text-center mb-6 font-bold dark:text-white">
+            Confirm Deletion
+          </Typography>
+          <Typography className="text-center mb-6">
+            Are you sure you want to delete this user? This action cannot be undone.
+          </Typography>
+          <div className="flex justify-center gap-4">
+            <Button onClick={() => setDeleteOpen(false)}>Cancel</Button>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={handleDeleteUser}
+            >
+              Confirm Delete
+            </Button>
+          </div>
+        </Box>
+      </Modal>
+    </Box>
   );
 };
 

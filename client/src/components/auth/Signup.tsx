@@ -17,33 +17,18 @@ const validationSchema = Yup.object().shape({
   password: Yup.string()
     .min(8, "Password must be at least 8 characters")
     .required("Password is required"),
-  department_id: Yup.string().required("Department is required"),
 });
 
 const SignUp = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [departments, setDepartments] = useState([]);
   const [image, setImage] = useState<File | null>(null);
-
-  useEffect(() => {
-    const fetchDepartments = async () => {
-      try {
-        const res = await axios.get("http://localhost:3032/admin/get-departments");
-        setDepartments(res.data);
-      } catch (error) {
-        toast.error("Failed to load departments");
-      }
-    };
-    fetchDepartments();
-  }, []);
 
   const formik = useFormik({
     initialValues: { 
       name: "", 
       email: "", 
       password: "", 
-      department_id: "" 
     },
     validationSchema,
     onSubmit: async (values) => {
@@ -58,7 +43,6 @@ const SignUp = () => {
         formData.append("name", values.name);
         formData.append("email", values.email);
         formData.append("password", values.password);
-        formData.append("department_id", values.department_id);
         formData.append("image", image);
 
         const res = await axios.post(
@@ -86,7 +70,6 @@ const SignUp = () => {
       name: "John Doe",
       email: "john@example.com",
       password: "demo@12345",
-      department_id: ""
     });
     toast.success("Demo credentials loaded!");
   };
@@ -219,40 +202,6 @@ const SignUp = () => {
               )}
             </div>
 
-            {/* Department Select */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Department
-              </label>
-              <div className="relative">
-                <select
-                  name="department_id"
-                  value={formik.values.department_id}
-                  onChange={formik.handleChange}
-                  className={`w-full px-4 py-3 rounded-lg border ${
-                    formik.errors.department_id && formik.touched.department_id
-                      ? "border-red-500 pr-10"
-                      : "border-gray-300"
-                  } focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all`}
-                >
-                  <option value="">Select Department</option>
-                  {departments.map((d: any) => (
-                    <option key={d.id} value={d.id}>
-                      {d.department_name}
-                    </option>
-                  ))}
-                </select>
-                {formik.errors.department_id && formik.touched.department_id && (
-                  <div className="absolute right-3 top-3.5 text-red-500">
-                    <AiOutlineWarning className="h-5 w-5" />
-                  </div>
-                )}
-              </div>
-              {formik.errors.department_id && formik.touched.department_id && (
-                <p className="mt-1 text-sm text-red-600">{formik.errors.department_id}</p>
-              )}
-            </div>
-
             {/* Image Upload */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -290,7 +239,13 @@ const SignUp = () => {
               </Link>
             </div>
 
-          
+            <button
+              type="button"
+              onClick={loadDemoData}
+              className="w-full text-indigo-600 hover:text-indigo-700 font-medium py-2 text-sm"
+            >
+              Load Demo Credentials
+            </button>
           </form>
         </div>
       </motion.div>
