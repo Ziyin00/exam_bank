@@ -9,6 +9,7 @@ const { askQuestion } = require('../controller/student/askQuation')
 const { getStudentCourseQA } = require('../controller/student/get.quation.answer')
 const { getStudentAnswerCount } = require('../controller/student/get.answer.count')
 const { getAllCourses } = require('../controller/student/get.all.course')
+const { getCoursesByYear } = require('../controller/student/get.coursByYear')
 
 const router = express.Router()
 
@@ -29,5 +30,6 @@ router.get('/get-cours/:id', getCoursesByDepartment)
 router.get('/get-detail-course/:id', getDetailCours)
 router.get('/get-quation-answer/:id', getStudentCourseQA)
 router.get('/get-all-course', getAllCourses)
+router.get('/get-course-by-year/:year', getCoursesByYear)
 
 module.exports = router

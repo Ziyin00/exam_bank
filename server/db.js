@@ -72,6 +72,7 @@ connection.getConnection((err) => {
             prerequisite2 TEXT,
             image VARCHAR(255),
             description TEXT,
+            year INT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (category_id) REFERENCES categories(id)
                 ON DELETE SET NULL ON UPDATE CASCADE,
@@ -129,6 +130,16 @@ connection.getConnection((err) => {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (category_id) REFERENCES categories(id)
                 ON DELETE SET NULL ON UPDATE CASCADE
+        );`,
+
+        `CREATE TABLE IF NOT EXISTS course_ratings (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            course_id INT NOT NULL,
+            student_id INT NOT NULL,
+            rating INT CHECK (rating BETWEEN 1 AND 5),
+            rated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+            FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
         );`
     ]
 
