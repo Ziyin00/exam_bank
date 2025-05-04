@@ -13,6 +13,7 @@ const { deleteStudent } = require('../controller/supperAdmin/delete.student')
 const { updateStudent } = require('../controller/supperAdmin/edit.student')
 const { editAccount } = require('../controller/supperAdmin/edit.account')
 const { getAccount } = require('../controller/supperAdmin/get.account')
+const { getAllCourses } = require('../controller/supperAdmin/get.all.course')
 
 
 const router = express.Router()
@@ -30,6 +31,7 @@ router.get('/get-category', getCategory)
 router.get('/get-departments', getDepartment)
 router.get('/get-student', getStudents)
 router.get('/get-account', getAccount)
+router.get('/get-all-course', getAllCourses)
 
 // delete
 router.delete('/delete-teacher/:id', deleteTeacher)
