@@ -1,7 +1,7 @@
 const connection = require("../../db");
 
 const getCourseRating = (req, res) => {
-    const courseId = req.params.course_id;
+    const courseId = req.params.id;
 
     try {
         const query = `
