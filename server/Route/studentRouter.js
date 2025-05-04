@@ -10,6 +10,8 @@ const { getStudentCourseQA } = require('../controller/student/get.quation.answer
 const { getStudentAnswerCount } = require('../controller/student/get.answer.count')
 const { getAllCourses } = require('../controller/student/get.all.course')
 const { getCoursesByYear } = require('../controller/student/get.coursByYear')
+const { rateCourse } = require('../controller/student/reating')
+const { getCourseRating } = require('../controller/student/get.average.reating')
 
 const router = express.Router()
 
@@ -18,6 +20,7 @@ router.post('/student-sign-up', studentSignUp)
 router.post('/login', studentLogin)
 router.post('/give-comment', giveComment)
 router.post('/ask-quation', askQuestion)
+router.post('/rateing', rateCourse)
 
 // put(update student)
 router.put('/edit-profile/:id', updateStudent)
@@ -31,5 +34,6 @@ router.get('/get-detail-course/:id', getDetailCours)
 router.get('/get-quation-answer/:id', getStudentCourseQA)
 router.get('/get-all-course', getAllCourses)
 router.get('/get-course-by-year/:year', getCoursesByYear)
+router.get('/rating/:id', getCourseRating)
 
 module.exports = router
