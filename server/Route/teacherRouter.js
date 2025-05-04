@@ -31,7 +31,7 @@ router.get('/get-QA/:id', getCourseQA)
 router.get('/get-exams', getAllExams)
 router.get('/get-quations-count', getAllQuestionsCount)  //this for count message    you accpt like this total
 router.get('/get-all-course', getAllCourses)
-router.get('/rating', getCourseRating)
+router.get('/rating/:id', getCourseRating)
 
 // update profile/edit profile
 router.put('/edit-profile', updateTeacher)
