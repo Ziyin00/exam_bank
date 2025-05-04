@@ -28,7 +28,7 @@ const updateTeacher = [
 
         let teacher_id;
         try {
-            const decoded = jwt.verify(token, process.env.TEACHER_PASSWORD); // Use your JWT secret here
+            const decoded = jwt.verify(token, process.env.TEACHER_KEY);
             teacher_id = decoded.id;
         } catch (err) {
             return res.status(401).json({ status: false, message: 'Invalid or expired token!' });

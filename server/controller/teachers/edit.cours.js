@@ -24,6 +24,7 @@ const editCourse = [
             title,
             course_tag,
             category_id,
+            department_id,
             benefit1,
             benefit2,
             prerequisite1,
@@ -41,13 +42,14 @@ const editCourse = [
         try {
             const updateQuery = `
                 UPDATE courses
-                SET title = ?, course_tag = ?, category_id = ?, benefit1 = ?, benefit2 = ?, prerequisite1 = ?, prerequisite2 = ?, description = ?, image = IFNULL(?, image)
+                SET title = ?, course_tag = ?, category_id = ?,department_id = ? , benefit1 = ?, benefit2 = ?, prerequisite1 = ?, prerequisite2 = ?, description = ?, image = IFNULL(?, image)
                 WHERE id = ?
             `;
             const values = [
                 title,
                 course_tag,
                 category_id,
+                department_id,
                 benefit1,
                 benefit2,
                 prerequisite1,
