@@ -1,9 +1,11 @@
+// components/CreateExam.tsx
 "use client";
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { AiOutlinePlus, AiOutlineDelete, AiOutlineEdit } from "react-icons/ai";
 import { MdOutlineUpload } from "react-icons/md";
 import toast from "react-hot-toast";
 import { style } from "@/src/styles/style";
+// import { createExam, updateExam, deleteExam, getExams } from "@/api/examApi";
 
 interface Exam {
   id: string;
@@ -18,11 +20,25 @@ const CreateExam: React.FC = () => {
   const [currentExam, setCurrentExam] = useState<Partial<Exam>>({});
   const [imageUploadMethod, setImageUploadMethod] = useState<"url" | "file">("url");
 
+  // Fetch exams from the backend
+  const fetchExams = useCallback(async () => {
+    try {
+      const data = await getExams();
+      setExams(data);
+    } catch (error) {
+      toast.error("Error fetching exams");
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchExams();
+  }, [fetchExams]);
+
   const handleImageUpload = useCallback((file: File) => {
     if (!file.type.startsWith("image/")) {
       return toast.error("Please upload a valid image file");
     }
-    
+
     const reader = new FileReader();
     reader.onload = () => {
       setCurrentExam(prev => ({ ...prev, sheetImage: reader.result as string }));
@@ -30,38 +46,50 @@ const CreateExam: React.FC = () => {
     reader.readAsDataURL(file);
   }, []);
 
-  const handleSubmit = useCallback((e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!currentExam.title || !currentExam.description) {
       return toast.error("Please fill all required fields");
     }
 
     const newExam: Exam = {
-      id: Date.now().toString(),
-      title: currentExam.title,
-      description: currentExam.description,
+      id: currentExam.id || Date.now().toString(),
+      title: currentExam.title!,
+      description: currentExam.description!,
       sheetImage: currentExam.sheetImage || "",
-      createdAt: new Date()
+      createdAt: new Date(),
     };
 
-    setExams(prev => (currentExam.id 
-      ? prev.map(ex => ex.id === currentExam.id ? newExam : ex)
-      : [...prev, newExam]));
-      
-    setCurrentExam({});
-    toast.success(currentExam.id ? "Exam updated" : "Exam created");
-  }, [currentExam]);
+    try {
+      if (currentExam.id) {
+        await updateExam(currentExam.id, newExam);
+        toast.success("Exam updated");
+      } else {
+        await createExam(newExam);
+        toast.success("Exam created");
+      }
+      fetchExams(); // Re-fetch the exams after update/create
+      setCurrentExam({});
+    } catch (error) {
+      toast.error("Error saving exam");
+    }
+  }, [currentExam, fetchExams]);
 
   const handleEdit = useCallback((exam: Exam) => {
     setCurrentExam(exam);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
-  const handleDelete = useCallback((examId: string) => {
-    setExams(prev => prev.filter(ex => ex.id !== examId));
-    toast.success("Exam deleted");
-  }, []);
+  const handleDelete = useCallback(async (examId: string) => {
+    try {
+      await deleteExam(examId);
+      toast.success("Exam deleted");
+      fetchExams(); // Re-fetch the exams after deletion
+    } catch (error) {
+      toast.error("Error deleting exam");
+    }
+  }, [fetchExams]);
 
   return (
     <div className="w-[90%] m-auto py-8 text-black dark:text-white">
@@ -98,9 +126,7 @@ const CreateExam: React.FC = () => {
               <button
                 type="button"
                 className={`px-4 py-2 rounded ${
-                  imageUploadMethod === "url" 
-                    ? "bg-blue-600 text-white" 
-                    : "bg-gray-200 dark:bg-gray-700"
+                  imageUploadMethod === "url" ? "bg-blue-600 text-white" : "bg-gray-200 dark:bg-gray-700"
                 }`}
                 onClick={() => setImageUploadMethod("url")}
               >
@@ -109,9 +135,7 @@ const CreateExam: React.FC = () => {
               <button
                 type="button"
                 className={`px-4 py-2 rounded ${
-                  imageUploadMethod === "file" 
-                    ? "bg-blue-600 text-white" 
-                    : "bg-gray-200 dark:bg-gray-700"
+                  imageUploadMethod === "file" ? "bg-blue-600 text-white" : "bg-gray-200 dark:bg-gray-700"
                 }`}
                 onClick={() => setImageUploadMethod("file")}
               >
@@ -138,9 +162,7 @@ const CreateExam: React.FC = () => {
                 />
                 <label htmlFor="sheet-upload" className="cursor-pointer">
                   <MdOutlineUpload className="text-4xl mx-auto mb-4" />
-                  <p className="text-gray-500 dark:text-gray-400">
-                    Drag and drop image or click to upload
-                  </p>
+                  <p className="text-gray-500 dark:text-gray-400">Drag and drop image or click to upload</p>
                 </label>
               </div>
             )}
@@ -166,7 +188,7 @@ const CreateExam: React.FC = () => {
             <AiOutlinePlus className="mr-2" />
             {currentExam.id ? "Update Exam" : "Create Exam"}
           </button>
-          
+
           {currentExam.id && (
             <button
               type="button"
@@ -182,7 +204,7 @@ const CreateExam: React.FC = () => {
       {/* Exam Bank */}
       <div className="bg-[#cdc8c817] p-6 rounded-xl shadow-lg">
         <h2 className="text-3xl font-bold mb-8 border-b-2 pb-4">Exam Bank</h2>
-        
+
         {exams.length === 0 ? (
           <div className="text-center py-12 text-gray-500 dark:text-gray-400">
             No exams created yet

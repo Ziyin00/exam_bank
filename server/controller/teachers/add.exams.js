@@ -19,15 +19,15 @@ const upload = multer({
 
 const postExams = [upload.single('image'), async (req, res) => {
 
-    const { title, description, category_id } = req.body;
+    const { title, description, department_id } = req.body;
     const image = req.file ? req.file.filename : null;
 
-    if (!title || !category_id) {
+    if (!title || !department_id) {
         return res.status(400).json({ status: false, message: 'Title and category are required' });
     }
     try {
-        const sql = 'INSERT INTO exams (title, description, image, category_id) VALUES (?, ?, ?, ?)';
-        connection.query(sql, [title, description, image, category_id], (err, result) => {
+        const sql = 'INSERT INTO exams (title, description, image, department_id) VALUES (?, ?, ?, ?)';
+        connection.query(sql, [title, description, image, department_id], (err, result) => {
             if (err) {
                 console.error('Insert error:', err.message);
                 return res.status(500).json({ status: false, message: 'Database error' });

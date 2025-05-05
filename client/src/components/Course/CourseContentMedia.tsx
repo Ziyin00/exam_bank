@@ -1,74 +1,69 @@
 'use client'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { BsChevronDown, BsChevronUp } from 'react-icons/bs'
 import { MdOutlineOndemandVideo } from 'react-icons/md'
 
-interface Lesson {
-  id: string
-  section: string
-  title: string
-  duration: number
-  imageUrl: string
+interface CourseContentMediaProps  {
+  lesson: {
+    _id: string
+    section: string
+    title: string
+    duration: number
+    imageUrl: string
+  }
 }
 
-const CourseContentWithMedia = () => {
-  // Demo data with images
-  const demoLessons: Lesson[] = [
-    { 
-      id: '1', 
-      section: 'Getting Started', 
-      title: 'Course Introduction', 
-      duration: 8,
-      imageUrl: '../public/assets/worksheet1.jpg'
-    },
-    { 
-      id: '2', 
-      section: 'Getting Started', 
-      title: 'Environment Setup', 
-      duration: 15,
-    imageUrl: '../public/assets/worksheet1.jpg'
-    },
-    { 
-      id: '3', 
-      section: 'Core Concepts', 
-      title: 'Fundamental Principles', 
-      duration: 25,
-    imageUrl: '../public/assets/worksheet1.jpg'
-    },
-  ]
-
-  // Component state
-  const [visibleSections, setVisibleSections] = useState<Set<string>>(
-    new Set(['Getting Started'])
-  )
+const CourseContentMedia = ({ lesson }: CourseContentMediaProps) => {
+  const [lessons, setLessons] = useState<CourseContentMediaProps[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set())
   const [activeLesson, setActiveLesson] = useState(0)
 
-  // Derived data
-  const courseSections = Array.from(new Set(demoLessons.map(lesson => lesson.section)))
-  const activeMedia = demoLessons[activeLesson]
+  // Fetch course preview data from backend
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/preview`)
+        if (!res.ok) throw new Error('Failed to fetch course preview data')
+        const data = await res.json()
+        setLessons(data)
+        setVisibleSections(new Set([data[0]?.section])) // Default to first section
+      } catch (err: any) {
+        setError(err.message || 'Unknown error')
+      } finally {
+        setLoading(false)
+      }
+    }
 
-  // Helper functions
+    fetchData()
+  }, [])
+
   const toggleSection = (section: string) => {
     const updated = new Set(visibleSections)
     updated.has(section) ? updated.delete(section) : updated.add(section)
     setVisibleSections(updated)
   }
 
-  const formatDuration = (minutes: number) => {
-    return minutes > 60 
-      ? `${(minutes / 60).toFixed(1)} hours` 
-      : `${minutes} minutes`
-  }
+  const formatDuration = (minutes: number) =>
+    minutes > 60 ? `${(minutes / 60).toFixed(1)} hours` : `${minutes} minutes`
+
+  const courseSections = Array.from(new Set(lessons.map(lesson => lesson.section)))
+  const activeMedia = lessons[activeLesson]
+
+  if (loading) return <div className="text-center py-10">Loading course content...</div>
+  if (error) return <div className="text-center text-red-500 py-10">Error: {error}</div>
+  if (!lessons.length) return <div className="text-center py-10">No lessons found.</div>
 
   return (
     <div className="w-full flex flex-col lg:flex-row gap-8">
-      {/* Media Display Section */}
+      {/* Media Display */}
       <div className="lg:w-[60%]">
         <div className="relative w-full aspect-video bg-gray-100 dark:bg-gray-800 rounded-xl overflow-hidden">
           <Image
-            src={activeMedia.imageUrl}
-            alt={activeMedia.title}
+            src={activeMedia?.imageUrl || '/default.jpg'}
+            alt={activeMedia?.title || 'Course preview'}
             fill
             className="object-cover"
             quality={100}
@@ -76,21 +71,21 @@ const CourseContentWithMedia = () => {
           />
           <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
             <h2 className="text-xl font-semibold text-white">
-              {activeMedia.title}
+              {activeMedia?.title}
             </h2>
             <p className="text-gray-300">
-              {formatDuration(activeMedia.duration)}
+              {formatDuration(activeMedia?.duration)}
             </p>
           </div>
         </div>
       </div>
 
-      {/* Content List Section */}
+      {/* Lessons List */}
       <div className="lg:w-[40%] space-y-6 lg:sticky lg:top-24 lg:h-[calc(100vh-6rem)] lg:overflow-y-auto">
         {courseSections.map((section) => {
           const isVisible = visibleSections.has(section)
-          const sectionLessons = demoLessons.filter(lesson => lesson.section === section)
-          const totalDuration = sectionLessons.reduce((sum, lesson) => sum + lesson.duration, 0)
+          const sectionLessons = lessons.filter(lesson => lesson.section === section)
+          const totalDuration = sectionLessons.reduce((sum, l) => sum + l.duration, 0)
 
           return (
             <div key={section} className="border-b border-gray-200 dark:border-gray-700 pb-4">
@@ -113,29 +108,32 @@ const CourseContentWithMedia = () => {
                     {sectionLessons.length} lessons • {formatDuration(totalDuration)}
                   </p>
 
-                  {sectionLessons.map((lesson, index) => (
-                    <div
-                      key={lesson.id}
-                      onClick={() => setActiveLesson(index)}
-                      className={`p-3 rounded-lg transition-colors cursor-pointer ${
-                        activeLesson === index
-                          ? 'bg-blue-50 dark:bg-gray-700'
-                          : 'hover:bg-gray-50 dark:hover:bg-gray-800'
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <MdOutlineOndemandVideo className="flex-shrink-0 text-blue-500 mt-1" size={20} />
-                        <div>
-                          <h4 className="text-base font-medium text-gray-800 dark:text-gray-100">
-                            {lesson.title}
-                          </h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-300">
-                            {formatDuration(lesson.duration)}
-                          </p>
+                  {sectionLessons.map((lesson, index) => {
+                    const lessonIndex = lessons.findIndex(l => l._id === lesson._id)
+                    return (
+                      <div
+                        key={lesson._id}
+                        onClick={() => setActiveLesson(lessonIndex)}
+                        className={`p-3 rounded-lg transition-colors cursor-pointer ${
+                          activeLesson === lessonIndex
+                            ? 'bg-blue-50 dark:bg-gray-700'
+                            : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <MdOutlineOndemandVideo className="flex-shrink-0 text-blue-500 mt-1" size={20} />
+                          <div>
+                            <h4 className="text-base font-medium text-gray-800 dark:text-gray-100">
+                              {lesson.title}
+                            </h4>
+                            <p className="text-sm text-gray-600 dark:text-gray-300">
+                              {formatDuration(lesson.duration)}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -146,4 +144,4 @@ const CourseContentWithMedia = () => {
   )
 }
 
-export default CourseContentWithMedia
+export default CourseContentMedia

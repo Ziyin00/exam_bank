@@ -1,98 +1,84 @@
-import React, { useState } from 'react'
+'use client'
+import React, { useEffect, useState } from 'react'
 import { BsChevronDown, BsChevronUp } from 'react-icons/bs'
 import { MdOutlineOndemandVideo } from 'react-icons/md'
 
-interface DemoLesson {
-  id: string
+interface Lesson {
+  _id: string
   section: string
   title: string
   duration: number
 }
 
-const CourseContentList = () => {
-  // Demo course content data
-  const demoLessons: DemoLesson[] = [
-    { id: '1', section: 'Getting Started', title: 'Course Introduction', duration: 8 },
-    { id: '2', section: 'Getting Started', title: 'Environment Setup Guide', duration: 15 },
-    { id: '3', section: 'Core Concepts', title: 'Fundamental Principles', duration: 25 },
-    { id: '4', section: 'Core Concepts', title: 'Advanced Techniques', duration: 35 },
-    { id: '5', section: 'Practice', title: 'Hands-on Workshop', duration: 45 }
-  ]
+interface CourseContentListProps {
+  contents: any[]
+  activeIndex: number
+  setActiveIndex: (index: number) => void
+}
 
-  // State management
-  const [visibleSections, setVisibleSections] = useState<Set<string>>(
-    new Set(['Getting Started'])
-  )
-  const [activeLesson, setActiveLesson] = useState(0)
-  
-  // Derived data
-  const courseSections = Array.from(new Set(demoLessons.map(lesson => lesson.section)))
+const CourseContentList = ({ contents, activeIndex, setActiveIndex }: CourseContentListProps) => {
+  const [lessons, setLessons] = useState<Lesson[]>([])
+  const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set())
 
-  // Section visibility toggle
+  // Fetch lessons data
+  useEffect(() => {
+    const fetchLessons = async () => {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/cours/${contents[activeIndex]._id}`)
+      const data = await res.json()
+      setLessons(data)
+
+      // Optionally expand first section
+      if (data.length > 0) {
+        setVisibleSections(new Set([data[0].section]))
+      }
+    }
+
+    if (contents.length > 0) {
+      fetchLessons()
+    }
+  }, [activeIndex, contents])
+
   const toggleSection = (section: string) => {
-    const updatedVisibility = new Set(visibleSections)
-    updatedVisibility.has(section) 
-      ? updatedVisibility.delete(section)
-      : updatedVisibility.add(section)
-    setVisibleSections(updatedVisibility)
+    const updated = new Set(visibleSections)
+    updated.has(section) ? updated.delete(section) : updated.add(section)
+    setVisibleSections(updated)
   }
 
-  // Duration formatting helper
-  const formatDuration = (minutes: number) => {
-    if (minutes > 60) return `${(minutes / 60).toFixed(1)} hours`
-    return `${minutes} minutes`
-  }
+  const formatDuration = (minutes: number) =>
+    minutes > 60 ? `${(minutes / 60).toFixed(1)} hours` : `${minutes} minutes`
+
+  const courseSections = Array.from(new Set(lessons.map(lesson => lesson.section)))
 
   return (
-    <div className="w-full sticky top-24 space-y-6">
+    <div>
       {courseSections.map((section) => {
         const isVisible = visibleSections.has(section)
-        const sectionLessons = demoLessons.filter(lesson => lesson.section === section)
-        const totalSectionDuration = sectionLessons.reduce((sum, lesson) => sum + lesson.duration, 0)
+        const sectionLessons = lessons.filter(lesson => lesson.section === section)
 
         return (
-          <div key={section} className="border-b border-gray-200 dark:border-gray-700 pb-4">
-            {/* Section Header */}
+          <div key={section}>
             <div className="flex justify-between items-center mb-3">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
-                {section}
-              </h3>
+              <h3 className="text-lg font-semibold">{section}</h3>
               <button
                 onClick={() => toggleSection(section)}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                className="text-gray-500 hover:text-gray-700"
               >
                 {isVisible ? <BsChevronUp size={18} /> : <BsChevronDown size={18} />}
               </button>
             </div>
-
-            {/* Section Summary */}
             {isVisible && (
-              <div className="space-y-4">
-                <p className="text-sm text-gray-600 dark:text-gray-300">
-                  {sectionLessons.length} lessons • {formatDuration(totalSectionDuration)}
-                </p>
-
-                {/* Lessons List */}
-                {sectionLessons.map((lesson, index) => (
+              <div>
+                <p className="text-sm text-gray-600">{sectionLessons.length} lessons</p>
+                {sectionLessons.map((lesson) => (
                   <div
-                    key={lesson.id}
-                    onClick={() => setActiveLesson(index)}
-                    className={`p-3 rounded-lg transition-colors cursor-pointer ${
-                      activeLesson === index
-                        ? 'bg-blue-50 dark:bg-gray-700'
-                        : 'hover:bg-gray-50 dark:hover:bg-gray-800'
-                    }`}
+                    key={lesson._id}
+                    onClick={() => setActiveIndex(lesson._id)}
+                    className="flex items-center gap-3 cursor-pointer"
                   >
-                    <div className="flex items-start gap-3">
-                      <MdOutlineOndemandVideo className="flex-shrink-0 text-blue-500 mt-1" size={20} />
-                      <div>
-                        <h4 className="text-base font-medium text-gray-800 dark:text-gray-100">
-                          {lesson.title}
-                        </h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-300">
-                          {formatDuration(lesson.duration)}
-                        </p>
-                      </div>
+                    <MdOutlineOndemandVideo className="text-blue-500" size={20} />
+                    <div>
+                      <h4>{lesson.title}</h4>
+                      <p>{formatDuration(lesson.duration)}</p>
                     </div>
                   </div>
                 ))}

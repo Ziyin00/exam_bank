@@ -1,115 +1,81 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { slideInFromBottom } from "@/utils/motion";
 import { CardBody, CardContainer } from "./ui/3d-card";
 import Image from "next/image";
+import axios from "axios";
 
 type CourseType = {
-  id: number;
+  _id: string;
   title: string;
   description: string;
   category: string;
-  image: string;
+  imageUrl: string;
 };
-
-const courses: CourseType[] = [
-  {
-    id: 1,
-    title: "Advanced Machine Learning",
-    description: "Master deep learning and neural networks",
-    category: "Computer Science",
-    image: "/ml.jpg",
-  },
-  {
-    id: 2,
-    title: "Data Systems Architecture",
-    description: "Designing scalable database systems",
-    category: "Information Science",
-    image: "/database.jpg",
-  },
-  {
-    id: 3,
-    title: "Cybersecurity Fundamentals",
-    description: "Protect systems from digital attacks",
-    category: "Cyber Security",
-    image: "/cyber.jpg",
-  },
-  {
-    id: 4,
-    title: "AI Ethics & Society",
-    description: "Ethical implications of artificial intelligence",
-    category: "Computer Science",
-    image: "/ai-ethics.jpg",
-  },
-  {
-    id: 5,
-    title: "Cloud Computing",
-    description: "Advanced cloud infrastructure management",
-    category: "Information Science",
-    image: "/cloud.jpg",
-  },
-  {
-    id: 6,
-    title: "Network Defense",
-    description: "Advanced network security techniques",
-    category: "Cyber Security",
-    image: "/network.jpg",
-  },
-];
 
 const categories = ["all", "Computer Science", "Information Science", "Cyber Security"];
 
 const ThreeDCardDemo = ({
   title,
   description,
-  image,
+  imageUrl,
   category,
-}: {
-  title: string;
-  description: string;
-  image: string;
-  category: string;
-}) => {
-  return (
-    <CardContainer className="inter-var w-full">
-      <motion.div whileHover={{ scale: 1.05 }} className="h-full">
-        <CardBody className="bg-gray-50 relative group/card dark:hover:shadow-2xl dark:hover:shadow-indigo-500/[0.1] dark:bg-black dark:border-white/[0.2] border-black/[0.1] w-full h-full rounded-xl p-6 border">
-          <div className="flex flex-col h-full">
-            <Image
-              src={image}
-              height="400"
-              width="400"
-              className="h-48 w-full object-cover rounded-xl group-hover/card:shadow-xl"
-              alt={title}
-            />
-            <div className="mt-4 flex-1">
-              <div className="text-indigo-600 dark:text-indigo-400 text-sm font-medium">
-                {category}
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
-                {title}
-              </h3>
-              <p className="text-gray-600 dark:text-gray-300 mt-2 line-clamp-3">
-                {description}
-              </p>
+}: CourseType) => (
+  <CardContainer className="inter-var w-full">
+    <motion.div whileHover={{ scale: 1.05 }} className="h-full">
+      <CardBody className="bg-gray-50 relative group/card dark:hover:shadow-2xl dark:hover:shadow-indigo-500/[0.1] dark:bg-black dark:border-white/[0.2] border-black/[0.1] w-full h-full rounded-xl p-6 border">
+        <div className="flex flex-col h-full">
+          <Image
+            src={imageUrl || "/fallback.jpg"}
+            height={400}
+            width={400}
+            className="h-48 w-full object-cover rounded-xl group-hover/card:shadow-xl"
+            alt={title}
+          />
+          <div className="mt-4 flex-1">
+            <div className="text-indigo-600 dark:text-indigo-400 text-sm font-medium">
+              {category}
             </div>
-            <button className="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-lg transition-colors">
-              <a href="/ClientCourse">Work Sheets</a>
-            </button>
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
+              {title}
+            </h3>
+            <p className="text-gray-600 dark:text-gray-300 mt-2 line-clamp-3">
+              {description}
+            </p>
           </div>
-        </CardBody>
-      </motion.div>
-    </CardContainer>
-  );
-};
+          <button className="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-lg transition-colors">
+            <a href="/ClientCourse">Work Sheets</a>
+          </button>
+        </div>
+      </CardBody>
+    </motion.div>
+  </CardContainer>
+);
 
 const Course = () => {
+  const [courses, setCourses] = useState<CourseType[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [loading, setLoading] = useState(true);
 
-  const filteredCourses = selectedCategory === "all" 
-    ? courses 
-    : courses.filter(course => course.category === selectedCategory);
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const res = await axios.get("http://localhost:3032/student/get-all-course");
+        setCourses(res.data?.courses || []);
+      } catch (err) {
+        console.error("Failed to fetch courses:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCourses();
+  }, []);
+
+  const filteredCourses = selectedCategory === "all"
+    ? courses
+    : courses.filter((course) => course.category === selectedCategory);
 
   return (
     <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
@@ -139,35 +105,36 @@ const Course = () => {
         ))}
       </motion.div>
 
-      <motion.div
-        initial="hidden"
-        animate="visible"
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 px-4 sm:px-0 mx-auto max-w-7xl"
-      >
-        {filteredCourses.map((course) => (
-          <motion.div 
-            key={course.id} 
-            variants={slideInFromBottom}
-            className="w-full h-full"
+      {loading ? (
+        <p className="text-center text-gray-500">Loading courses...</p>
+      ) : (
+        <>
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 px-4 sm:px-0 mx-auto max-w-7xl"
           >
-            <ThreeDCardDemo
-              title={course.title}
-              description={course.description}
-              image={course.image}
-              category={course.category}
-            />
+            {filteredCourses.map((course) => (
+              <motion.div 
+                key={course._id} 
+                variants={slideInFromBottom}
+                className="w-full h-full"
+              >
+                <ThreeDCardDemo {...course} imageUrl={course.imageUrl} />
+              </motion.div>
+            ))}
           </motion.div>
-        ))}
-      </motion.div>
 
-      {filteredCourses.length === 0 && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-center text-gray-500 text-xl mt-12"
-        >
-          No courses found in this category.
-        </motion.div>
+          {filteredCourses.length === 0 && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-center text-gray-500 text-xl mt-12"
+            >
+              No courses found in this category.
+            </motion.div>
+          )}
+        </>
       )}
     </div>
   );

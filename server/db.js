@@ -82,10 +82,10 @@ connection.getConnection((err) => {
 
         `CREATE TABLE IF NOT EXISTS course_links (
             id INT AUTO_INCREMENT PRIMARY KEY,
-            course_id INT NOT NULL,
+            department_id  INT NOT NULL,
             link_name VARCHAR(100),
             link VARCHAR(255),
-            FOREIGN KEY (course_id) REFERENCES courses(id)
+            FOREIGN KEY (department_id) REFERENCES departments(id)
                 ON DELETE CASCADE ON UPDATE CASCADE
         );`,
 
@@ -126,9 +126,9 @@ connection.getConnection((err) => {
             title VARCHAR(150) NOT NULL,
             description TEXT,
             image VARCHAR(255),
-            category_id INT,
+            department_id INT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (category_id) REFERENCES categories(id)
+            FOREIGN KEY (department_id) REFERENCES departments(id)
                 ON DELETE SET NULL ON UPDATE CASCADE
         );`,
 

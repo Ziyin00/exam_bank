@@ -27,7 +27,7 @@ const addCourse = [
             prerequisite1,
             prerequisite2,
             description,
-            links,
+            links, // may be string or array
             year
         } = req.body;
 
@@ -73,11 +73,22 @@ const addCourse = [
                         return res.status(400).json({ status: false, message: 'Insert query error' });
                     }
 
-                    const courseId = result.insertId;
+                    // Process links (if present)
+                    let parsedLinks = [];
+                    if (typeof links === 'string') {
+                        try {
+                            parsedLinks = JSON.parse(links);
+                        } catch (parseErr) {
+                            console.warn('Invalid JSON in links, skipping links.');
+                            return res.status(200).json({ status: true, message: 'Course added without links' });
+                        }
+                    } else if (Array.isArray(links)) {
+                        parsedLinks = links;
+                    }
 
-                    if (Array.isArray(links) && links.length > 0) {
-                        const linkValues = links.map(link => [courseId, link.link_name, link.link]);
-                        const linkQuery = `INSERT INTO course_links (course_id, link_name, link) VALUES ?`;
+                    if (parsedLinks.length > 0) {
+                        const linkValues = parsedLinks.map(link => [department_id, link.link_name, link.link]);
+                        const linkQuery = `INSERT INTO course_links (department_id, link_name, link) VALUES ?`;
 
                         connection.query(linkQuery, [linkValues], (err) => {
                             if (err) {

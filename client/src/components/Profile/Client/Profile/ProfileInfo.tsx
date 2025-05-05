@@ -1,9 +1,9 @@
-import Image from 'next/image';
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { AiOutlineCamera } from 'react-icons/ai';
-import { toast } from 'react-hot-toast';
-import avatarDefault from '../../../../../public/assets/avatar.jpg';
+import Image from "next/image";
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { AiOutlineCamera } from "react-icons/ai";
+import { toast } from "react-hot-toast";
+import avatarDefault from "../../../../../public/assets/avatar.jpg";
 
 type Props = {
   user: any;
@@ -14,6 +14,19 @@ type Props = {
 const ProfileInfo: React.FC<Props> = ({ user, avatar, onAvatarChange }) => {
   const [name, setName] = useState(user?.name || "");
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // Fetch user data when the component mounts
+  useEffect(() => {
+    if (user?.email) {
+      fetch(`/api/profile?email=${user.email}`)
+        .then(res => res.json())
+        .then(data => {
+          setName(data?.name || "");
+          onAvatarChange(data?.avatar || avatarDefault);
+        })
+        .catch(() => toast.error("Failed to load user data"));
+    }
+  }, [user?.email, avatar, onAvatarChange]);
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -38,11 +51,33 @@ const ProfileInfo: React.FC<Props> = ({ user, avatar, onAvatarChange }) => {
     e.preventDefault();
     setIsUpdating(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      toast.success("Profile updated successfully!");
+    // Send the updated profile info to the backend
+    const updatedData = {
+      email: user.email,
+      name,
+      avatar
+    };
+
+    try {
+      const res = await fetch("/api/profile", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updatedData),
+      });
+
+      const result = await res.json();
+      if (res.ok) {
+        toast.success(result.message || "Profile updated successfully!");
+      } else {
+        toast.error(result.error || "Error updating profile");
+      }
+    } catch (error) {
+      toast.error("Failed to update profile");
+    } finally {
       setIsUpdating(false);
-    }, 1500);
+    }
   };
 
   return (

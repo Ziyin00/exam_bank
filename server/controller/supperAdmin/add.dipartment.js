@@ -1,7 +1,11 @@
 const connection = require("../../db");
 
 const addDepartment = async (req, res) => {
-    const { department_name } = req.body;
+    const { department_name } = req.body || {};
+
+    if (!department_name) {
+        return res.status(400).json({ status: false, message: 'department_name is required' });
+    }
 
     try {
         const checkQuery = 'SELECT * FROM departments WHERE department_name = ?';

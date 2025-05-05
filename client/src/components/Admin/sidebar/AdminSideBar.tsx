@@ -6,53 +6,13 @@ import Link from "next/link";
 import Image from "next/image";
 import { useTheme as useNextTheme } from "next-themes";
 import avatarDefault from "../../../../public/assets/avatar.jpg";
-import { 
-  ArrowBackIosIcon, 
-  ArrowForwardIosIcon, 
-  BarChartOutlinedIcon, 
-  ExitToAppIcon, 
-  GroupsIcon, 
-  HomeOutlinedIcon, 
-  OndemandVideoIcon, 
-  QuizIcon, 
-  SettingsIcon, 
-  VideoCallIcon,
-  
-} from "./Icons";
+// import { api } from "../../utils/api"; // Import API functions
+
+import { ArrowBackIosIcon, ArrowForwardIosIcon, BarChartOutlinedIcon, ExitToAppIcon, GroupsIcon, HomeOutlinedIcon, OndemandVideoIcon, QuizIcon, SettingsIcon, VideoCallIcon } from "./Icons";
 import { Button } from "../../ui/button";
 import { GridCloseIcon, GridMenuIcon } from "@mui/x-data-grid";
 import { SiAnswer, SiCoursera } from "react-icons/si";
 import { PiExam } from "react-icons/pi";
-
-interface ItemProps {
-  title: string;
-  to: string;
-  icon: JSX.Element;
-  selected: string;
-  setSelected: (title: string) => void;
-}
-
-const Item: FC<ItemProps> = ({ title, to, icon, selected, setSelected }) => {
-  const theme = useTheme();
-  
-  return (
-    <MenuItem
-      component={<Link href={to} />}
-      active={selected === title}
-      onClick={() => setSelected(title)}
-      icon={icon}
-      style={{
-        color: selected === title 
-          ? theme.palette.primary.main 
-          : theme.palette.text.primary,
-      }}
-    >
-      <Typography variant="body1" className="font-Poppins">
-        {title}
-      </Typography>
-    </MenuItem>
-  );
-};
 
 const AdminSideBar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -60,6 +20,7 @@ const AdminSideBar = () => {
   const [selected, setSelected] = useState("Dashboard");
   const [mounted, setMounted] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [exams, setExams] = useState([]);  // State to hold fetched exams
   const { theme: appTheme, setTheme } = useNextTheme();
   const muiTheme = useTheme();
   const isMobile = useMediaQuery("(max-width: 900px)");
@@ -67,6 +28,19 @@ const AdminSideBar = () => {
 
   useEffect(() => {
     setMounted(true);
+
+    // Fetch exams from the backend
+    const fetchExams = async () => {
+      try {
+        const fetchedExams = await api("exams");
+        setExams(fetchedExams);
+      } catch (err) {
+        console.error("Error fetching exams:", err);
+      }
+    };
+
+    fetchExams();
+
     const handleClickOutside = (event: MouseEvent) => {
       if (sidebarRef.current && !sidebarRef.current.contains(event.target as Node)) {
         setIsMobileOpen(false);
@@ -81,7 +55,6 @@ const AdminSideBar = () => {
   };
 
   const confirmLogout = () => {
-    // Add your logout logic here
     console.log("Logging out...");
     setShowLogoutModal(false);
     setIsMobileOpen(false);
@@ -115,21 +88,12 @@ const AdminSideBar = () => {
             background: `${appTheme === "dark" ? "#111C43" : "#fff"} !important`,
             borderRight: `1px solid ${muiTheme.palette.divider}`,
           },
-          "& .pro-menu-item": {
-            color: `${appTheme !== "dark" ? muiTheme.palette.text.primary : "#fff"}`,
-            "&:hover": {
-              color: `${muiTheme.palette.primary.main} !important`,
-            },
-          },
-          "& .pro-menu-item.active": {
-            color: `${muiTheme.palette.primary.main} !important`,
-          },
           position: isMobile ? "fixed" : "relative",
           zIndex: 1100,
           left: 0,
           top: 0,
           height: "100vh",
-          transform: isMobile 
+          transform: isMobile
             ? `translateX(${isMobileOpen ? "0" : "-100%"})`
             : "none",
           transition: "transform 0.3s ease-in-out",
@@ -139,15 +103,14 @@ const AdminSideBar = () => {
         <Sidebar collapsed={!isMobile && isCollapsed}>
           <Menu iconShape="square" menuItemStyles={{ button: { padding: "8px 24px" } }}>
             {/* Collapse Toggle */}
-            <MenuItem 
+            <MenuItem
               onClick={() => !isMobile && setIsCollapsed(!isCollapsed)}
               icon={(!isMobile && isCollapsed) ? <ArrowForwardIosIcon /> : <ArrowBackIosIcon />}
               style={{ margin: "16px 0", justifyContent: "center" }}
             >
               {(!isCollapsed || isMobile) && (
                 <Link href="/" className="no-underline">
-                  <Typography variant="p" className="font-Poppins font-extrabold uppercase text-2xl " 
-                    color="primary">
+                  <Typography variant="p" className="font-Poppins font-extrabold uppercase text-2xl" color="primary">
                     Exam Bank
                   </Typography>
                 </Link>
@@ -166,9 +129,9 @@ const AdminSideBar = () => {
                     className="rounded-full border-4 border-primary"
                     priority
                   />
-                  <Box 
-                    position="absolute" 
-                    bottom={0} 
+                  <Box
+                    position="absolute"
+                    bottom={0}
                     right={0}
                     bgcolor="primary.main"
                     className="w-6 h-6 rounded-full flex items-center justify-center"
@@ -187,97 +150,29 @@ const AdminSideBar = () => {
 
             {/* Navigation Items */}
             <Box pl={isCollapsed && !isMobile ? 0 : 2}>
-              <Item
-                title="Dashboard"
-                to="/admin"
-                icon={<HomeOutlinedIcon />}
-                selected={selected}
-                setSelected={setSelected}
-              />
-
+              <Item title="Dashboard" to="/admin" icon={<HomeOutlinedIcon />} selected={selected} setSelected={setSelected} />
               <Box my={2}>
                 <Typography variant="overline" color="text.secondary">
                   {(!isCollapsed || isMobile) && "Management"}
                 </Typography>
               </Box>
 
-              <Item
-                title="Users"
-                to="/admin/users"
-                icon={<GroupsIcon />}
-                selected={selected}
-                setSelected={setSelected}
-              />
-
-              <Item
-                title="Courses"
-                to="/admin/courses"
-                icon={<OndemandVideoIcon />}
-                selected={selected}
-                setSelected={setSelected}
-              />
-
-              <Item
-                title="Analytics"
-                to="/admin/analytics"
-                icon={<BarChartOutlinedIcon />}
-                selected={selected}
-                setSelected={setSelected}
-              />
-
+              <Item title="Users" to="/admin/users" icon={<GroupsIcon />} selected={selected} setSelected={setSelected} />
+              <Item title="Courses" to="/admin/courses" icon={<OndemandVideoIcon />} selected={selected} setSelected={setSelected} />
+              <Item title="Analytics" to="/admin/analytics" icon={<BarChartOutlinedIcon />} selected={selected} setSelected={setSelected} />
               <Box my={2}>
                 <Typography variant="overline" color="text.secondary">
                   {(!isCollapsed || isMobile) && "Content"}
                 </Typography>
               </Box>
 
-              <Item
-                title="Create Course"
-                to="/admin/create-course"
-                icon={<SiCoursera />}
-                selected={selected}
-                setSelected={setSelected}
-              />
-
-<Item
-                title="Create Exam"
-                to="/admin/create-exam"
-                icon={<PiExam />}
-                selected={selected}
-                setSelected={setSelected}
-              />
-
-<Item
-                title="Answer Questions"
-                to="/admin/answer"
-                icon={<SiAnswer />}
-                selected={selected}
-                setSelected={setSelected}
-              />
-
-              <Item
-                title="FAQ"
-                to="/admin/faq"
-                icon={<QuizIcon />}
-                selected={selected}
-                setSelected={setSelected}
-              />
-
-              {/* Settings Section */}
+              <Item title="Create Course" to="/admin/create-course" icon={<SiCoursera />} selected={selected} setSelected={setSelected} />
+              <Item title="Create Exam" to="/admin/create-exam" icon={<PiExam />} selected={selected} setSelected={setSelected} />
+              <Item title="Answer Questions" to="/admin/answer" icon={<SiAnswer />} selected={selected} setSelected={setSelected} />
+              <Item title="FAQ" to="/admin/faq" icon={<QuizIcon />} selected={selected} setSelected={setSelected} />
               <Box mt={4}>
-                <Item
-                  title="Settings"
-                  to="/admin/settings"
-                  icon={<SettingsIcon />}
-                  selected={selected}
-                  setSelected={setSelected}
-                />
-
-                <MenuItem
-                  onClick={logoutHandler}
-                  icon={<ExitToAppIcon />}
-                  style={{ color: muiTheme.palette.error.main }}
-                >
+                <Item title="Settings" to="/admin/settings" icon={<SettingsIcon />} selected={selected} setSelected={setSelected} />
+                <MenuItem onClick={logoutHandler} icon={<ExitToAppIcon />} style={{ color: muiTheme.palette.error.main }}>
                   <Typography variant="body1" className="font-Poppins">
                     Logout
                   </Typography>
@@ -308,25 +203,27 @@ const AdminSideBar = () => {
           <Typography variant="body1" color="textSecondary" mb={3}>
             Are you sure you want to log out?
           </Typography>
-          <Box display="flex" justifyContent="center" gap={2}>
-            <Button 
-              variant="outlined" 
-              onClick={() => setShowLogoutModal(false)}
-            >
-              Cancel
-            </Button>
-            <Button 
-              variant="contained" 
-              color="error"
-              onClick={confirmLogout}
-            >
-              Logout
-            </Button>
-          </Box>
+          <Button variant="outlined" color="error" onClick={confirmLogout}>Logout</Button>
+          <Button variant="outlined" sx={{ ml: 2 }} onClick={() => setShowLogoutModal(false)}>Cancel</Button>
         </Box>
       </Modal>
     </>
   );
 };
+
+const Item = ({ title, to, icon, selected, setSelected }: any) => (
+  <MenuItem
+    active={selected === title}
+    onClick={() => setSelected(title)}
+    icon={icon}
+    component={Link}
+    href={to}
+    sx={{ display: "flex", alignItems: "center" }}
+  >
+    <Typography variant="body2" className="font-Poppins" color="text.primary">
+      {title}
+    </Typography>
+  </MenuItem>
+);
 
 export default AdminSideBar;

@@ -1,47 +1,62 @@
 "use client";
+
 import * as React from "react";
 import { AlertCircle, CheckCircle2, Clock, MessageSquareText, Send, User2 } from "lucide-react";
 import { cn } from "@/src/lib/utils";
 import { TextareaAutosize } from "@mui/material";
 import { Button } from "../../ui/button";
+import { useEffect } from "react";
+import toast from "react-hot-toast";
 
 export default function Answer() {
   const [selectedQuestion, setSelectedQuestion] = React.useState(null);
   const [answer, setAnswer] = React.useState("");
   const [status, setStatus] = React.useState<"idle" | "submitting" | "success" | "error">("idle");
+  const [questions, setQuestions] = React.useState<any[]>([]);
 
-  // Mock questions data
-  const questions = [
-    {
-      id: 1,
-      title: "Calculus Integration Problem",
-      content: "I'm having trouble understanding how to solve ∫x²e^x dx. Can you explain the steps?",
-      author: "John Doe",
-      date: "2024-03-15",
-      status: "pending"
-    },
-    {
-      id: 2,
-      title: "Organic Chemistry Reaction Mechanism",
-      content: "Why does the SN2 reaction proceed through backside attack?",
-      author: "Sarah Smith",
-      date: "2024-03-14",
-      status: "answered"
-    },
-    // Add more mock questions...
-  ];
+  // Fetch questions on mount
+  useEffect(() => {
+    const fetchQuestions = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/questions`);
+        const data = await response.json();
+        setQuestions(data);
+      } catch (error) {
+        toast.error("Error fetching questions.");
+      }
+    };
+    fetchQuestions();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus("submitting");
+
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setStatus("success");
-      setAnswer("");
-      setTimeout(() => setStatus("idle"), 3000);
+      // Simulate API call to submit answer
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/submit-answer`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          questionId: selectedQuestion.id,
+          answer,
+        }),
+      });
+      const data = await response.json();
+
+      if (response.ok) {
+        setStatus("success");
+        setAnswer("");
+        setTimeout(() => setStatus("idle"), 3000);
+      } else {
+        setStatus("error");
+        toast.error(data.message || "Error submitting answer");
+      }
     } catch (error) {
       setStatus("error");
+      toast.error("Error submitting answer.");
     }
   };
 

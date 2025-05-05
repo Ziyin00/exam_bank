@@ -1,22 +1,37 @@
 // CoursePreview.tsx
 import React from 'react';
+import axios from 'axios';
 import { motion } from 'framer-motion';
 import { FiCheckCircle, FiEdit, FiExternalLink } from 'react-icons/fi';
 import { BsLink45Deg } from 'react-icons/bs';
 
 interface CoursePreviewProps {
   data: any;
-  onSubmit: () => void;
   onBack: () => void;
   isLoading: boolean;
+  setIsLoading: (value: boolean) => void;
 }
 
 const CoursePreview: React.FC<CoursePreviewProps> = ({
   data,
-  onSubmit,
   onBack,
-  isLoading
+  isLoading,
+  setIsLoading,
 }) => {
+  const handlePublish = async () => {
+    try {
+      setIsLoading(true);
+      const res = await axios.post('http://localhost:3032/teacher/add-cours', data);
+      console.log('✅ Course published:', res.data);
+      alert('Course published successfully!');
+    } catch (error) {
+      console.error('❌ Failed to publish course:', error);
+      alert('Failed to publish the course. Check console for details.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
@@ -41,10 +56,6 @@ const CoursePreview: React.FC<CoursePreviewProps> = ({
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
-              <h4 className="font-semibold mb-2">Price</h4>
-              <p>${data.price} (Est. ${data.estimatedPrice})</p>
-            </div>
             <div className="p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
               <h4 className="font-semibold mb-2">Category</h4>
               <p>{data.category}</p>
@@ -107,17 +118,13 @@ const CoursePreview: React.FC<CoursePreviewProps> = ({
             Back
           </button>
           <button
-            onClick={onSubmit}
+            onClick={handlePublish}
             disabled={isLoading}
             className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg flex items-center gap-2"
           >
-            {isLoading ? (
-              'Publishing...'
-            ) : (
-              <>
-                <FiCheckCircle /> Publish Course
-              </>
-            )}
+            {isLoading ? 'Publishing...' : <>
+              <FiCheckCircle /> Publish Course
+            </>}
           </button>
         </div>
       </div>

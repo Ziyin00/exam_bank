@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import React, { useEffect, useState } from 'react'
 import { 
@@ -20,74 +20,37 @@ import {
   useTheme,
   Chip,
   Avatar,
-  Tooltip,
-  Skeleton
+  Tooltip
 } from '@mui/material'
 import { 
   AiOutlineDelete, 
-  AiOutlinePlus,
-  AiOutlineEye 
+  AiOutlinePlus 
 } from 'react-icons/ai'
-import { FiEdit2 } from "react-icons/fi"
-import { format } from 'date-fns'
 import { BsSearch, BsSortDown } from 'react-icons/bs'
-import { styled } from '@mui/material/styles'
 import toast from 'react-hot-toast'
-import { motion, AnimatePresence } from 'framer-motion'
-
-const StyledDataGrid = styled(DataGrid)(({ theme }) => ({
-  '& .MuiDataGrid-columnHeaders': {
-    backgroundColor: theme.palette.mode === 'dark' ? '#2a3eb1' : '#3f51b5',
-    color: theme.palette.common.white,
-    fontSize: 16,
-    borderRadius: '12px 12px 0 0',
-  },
-  '& .MuiDataGrid-cell': {
-    borderBottom: `1px solid ${theme.palette.mode === 'dark' ? '#ffffff30' : '#00000030'}`,
-  },
-  '& .MuiDataGrid-row': {
-    transition: 'all 0.3s ease',
-    '&:hover': {
-      transform: 'scale(1.005)',
-      boxShadow: theme.shadows[2],
-      backgroundColor: theme.palette.mode === 'dark' ? '#1f2a40' : '#f5f5f5',
-    }
-  },
-}))
-
-const demoCourses = [
-  {
-    id: '1',
-    title: 'Advanced React Development',
-    ratings: 4.8,
-    purchased: 2345,
-    createdAt: new Date(2023, 0, 15),
-    status: 'Published',
-    thumbnail: '/react-course.jpg',
-    category: 'Frontend',
-    price: 199,
-    students: [
-      { avatar: '/user1.jpg', name: 'John' },
-      { avatar: '/user2.jpg', name: 'Sarah' },
-      { avatar: '/user3.jpg', name: 'Mike' }
-    ]
-  },
-  // Add more demo courses...
-]
 
 const AllCourses = () => {
   const theme = useTheme()
   const [open, setOpen] = useState(false)
-  const [courseId, setCourseId] = useState("")
+  const [courseId, setCourseId] = useState('')
   const [courses, setCourses] = useState<any[]>([])
-  const [search, setSearch] = useState("")
+  const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    setTimeout(() => {
-      setCourses(demoCourses)
-      setLoading(false)
-    }, 1500)
+    const fetchCourses = async () => {
+      try {
+        const response = await fetch('http://localhost3032/teacher/get-all-course')
+        const data = await response.json()
+        setCourses(data)
+        setLoading(false)
+      } catch (error) {
+        console.error('Error fetching courses:', error)
+        setLoading(false)
+      }
+    }
+
+    fetchCourses()
   }, [])
 
   const columns = [
@@ -121,30 +84,6 @@ const AllCourses = () => {
         </div>
       )
     },
-
-    { 
-      field: 'students', 
-      headerName: 'Students', 
-      flex: 1,
-      renderCell: (params: any) => (
-        <div className="flex items-center">
-          {params.value.map((student: any, index: number) => (
-            <Tooltip key={index} title={student.name}>
-              <Avatar
-                src={student.avatar}
-                sx={{ 
-                  width: 32, 
-                  height: 32, 
-                  marginLeft: index > 0 ? -1.5 : 0,
-                  border: `2px solid ${theme.palette.background.paper}`
-                }}
-              />
-            </Tooltip>
-          ))}
-          <Typography sx={{ ml: 1 }}>{params.row.purchased}+ enrolled</Typography>
-        </div>
-      )
-    },
     { 
       field: 'status', 
       headerName: 'Status', 
@@ -166,7 +105,6 @@ const AllCourses = () => {
       flex: 0.8,
       renderCell: (params: any) => (
         <div className="flex items-center gap-20">
-          
           <Tooltip title="Delete">
             <IconButton
               color="error"
@@ -183,49 +121,11 @@ const AllCourses = () => {
     },
   ]
 
-  const CustomToolbar = () => (
-    <GridToolbarContainer sx={{ p: 2, gap: 2, flexWrap: 'wrap' }}>
-      <TextField
-        variant="outlined"
-        placeholder="Search courses..."
-        size="small"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        InputProps={{
-          startAdornment: <BsSearch className="mr-2" />,
-          sx: { borderRadius: '8px' }
-        }}
-        sx={{ width: { xs: '100%', sm: 300 } }}
-      />
-      <div className="flex items-center gap-2 flex-wrap">
-        <Button
-          variant="outlined"
-          startIcon={<BsSortDown />}
-          sx={{ borderRadius: '8px' }}
-        >
-          Sort
-        </Button>
-        <GridToolbarColumnsButton sx={{ borderRadius: '8px' }} />
-        <GridToolbarFilterButton sx={{ borderRadius: '8px' }} />
-        <GridToolbarExport sx={{ borderRadius: '8px' }} />
-        <Button
-          variant="contained"
-          startIcon={<AiOutlinePlus />}
-          href="/admin/create-course"
-          sx={{ 
-            borderRadius: '8px',
-            ml: { xs: 0, sm: 'auto' },
-            width: { xs: '100%', sm: 'auto' }
-          }}
-        >
-          New Course
-        </Button>
-      </div>
-    </GridToolbarContainer>
-  )
-
   const handleDelete = async () => {
     try {
+      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/courses/${courseId}`, {
+        method: 'DELETE'
+      })
       setCourses(prev => prev.filter(course => course.id !== courseId))
       toast.success('Course deleted successfully')
       setOpen(false)
@@ -257,12 +157,39 @@ const AllCourses = () => {
           overflow: 'hidden'
         }
       }}>
-        <StyledDataGrid
+        <DataGrid
           rows={filteredCourses}
           columns={columns}
           loading={loading}
           components={{
-            Toolbar: CustomToolbar,
+            Toolbar: () => (
+              <GridToolbarContainer sx={{ p: 2, gap: 2, flexWrap: 'wrap' }}>
+                <TextField
+                  variant="outlined"
+                  placeholder="Search courses..."
+                  size="small"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  sx={{ width: { xs: '100%', sm: 300 } }}
+                />
+                <Button
+                  variant="outlined"
+                  startIcon={<BsSortDown />}
+                >
+                  Sort
+                </Button>
+                <GridToolbarColumnsButton />
+                <GridToolbarFilterButton />
+                <GridToolbarExport />
+                <Button
+                  variant="contained"
+                  startIcon={<AiOutlinePlus />}
+                  href="/admin/create-course"
+                >
+                  New Course
+                </Button>
+              </GridToolbarContainer>
+            ),
             LoadingOverlay: LinearProgress,
             NoRowsOverlay: () => (
               <div className="h-full flex items-center justify-center text-gray-500">
@@ -273,11 +200,6 @@ const AllCourses = () => {
           pageSize={10}
           rowsPerPageOptions={[5, 10, 20]}
           disableSelectionOnClick
-          sx={{
-            '& .MuiDataGrid-cell:focus': { outline: 'none' },
-            '& .MuiDataGrid-columnSeparator': { display: 'none' }
-          }}
-          
         />
       </Box>
 
@@ -303,7 +225,6 @@ const AllCourses = () => {
             <Button 
               variant="outlined" 
               onClick={() => setOpen(false)}
-              sx={{ borderRadius: '8px' }}
             >
               Cancel
             </Button>
@@ -311,7 +232,6 @@ const AllCourses = () => {
               variant="contained" 
               color="error"
               onClick={handleDelete}
-              sx={{ borderRadius: '8px' }}
             >
               Confirm Delete
             </Button>

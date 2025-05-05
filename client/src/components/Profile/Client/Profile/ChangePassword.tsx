@@ -55,10 +55,25 @@ const ChangePassword: React.FC<Props> = ({ user }) => {
 
     setIsLoading(true);
     try {
-      // Simulated API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      toast.success('Password updated successfully!');
-      setPasswords({ oldPassword: '', newPassword: '', confirmPassword: '' });
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/change-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user?.token}`,
+        },
+        body: JSON.stringify({
+          oldPassword: passwords.oldPassword,
+          newPassword: passwords.newPassword,
+        }),
+      });
+
+      if (response.ok) {
+        toast.success('Password updated successfully!');
+        setPasswords({ oldPassword: '', newPassword: '', confirmPassword: '' });
+      } else {
+        const data = await response.json();
+        toast.error(data?.message || 'Password update failed. Please try again.');
+      }
     } catch (error) {
       toast.error('Password update failed. Please try again.');
     } finally {
@@ -127,9 +142,7 @@ const ChangePassword: React.FC<Props> = ({ user }) => {
               {[...Array(4)].map((_, i) => (
                 <div
                   key={i}
-                  className={`flex-1 rounded-full transition-all ${
-                    i < passwordStrength ? strengthColors[passwordStrength] : 'bg-gray-200 dark:bg-gray-600'
-                  }`}
+                  className={`flex-1 rounded-full transition-all ${i < passwordStrength ? strengthColors[passwordStrength] : 'bg-gray-200 dark:bg-gray-600'}`}
                 />
               ))}
             </div>

@@ -25,8 +25,7 @@ const CourseCard = () => {
     },
     ratings: 4.5,
     purchased: 2350,
-    price: 29.99,
-    estimatedPrice: 99.99,
+  
     courseData: new Array(12) // 12 lectures
   };
 
