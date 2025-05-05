@@ -3,8 +3,17 @@ const connection = require("../../db");
 const getAllCourses = async (req, res) => {
     try {
         const sql = `
-            SELECT id, title, description, image, category_id, department_id
+            SELECT 
+                courses.id, 
+                courses.title, 
+                courses.description,
+                courses.image,
+                courses.category_id,
+                courses.department_id,
+                departments.department_name,
+                courses.year
             FROM courses
+            JOIN departments ON courses.department_id = departments.id
         `;
 
         connection.query(sql, (err, results) => {
