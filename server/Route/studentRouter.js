@@ -1,5 +1,5 @@
 const express = require('express')
-const { studentSignUp } = require('../controller/student/sign.up')
+const { studentSignUp } = require('../controller/student/sign.up');
 const { studentLogin } = require('../controller/student/login')
 const { getCoursesByDepartment } = require('../controller/student/getCours')
 const { giveComment } = require('../controller/student/give.comment')
@@ -13,6 +13,8 @@ const { rateCourse } = require('../controller/student/reating')
 const { getCourseRating } = require('../controller/student/get.average.reating')
 
 const router = express.Router()
+
+router.use(express.json());
 
 // post
 router.post('/student-sign-up', studentSignUp)

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { AiOutlineEye, AiOutlineEyeInvisible, AiOutlineWarning } from "react-icons/ai";
@@ -22,7 +22,6 @@ const validationSchema = Yup.object().shape({
 const SignUp = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [image, setImage] = useState<File | null>(null);
 
   const formik = useFormik({
     initialValues: { 
@@ -32,33 +31,30 @@ const SignUp = () => {
     },
     validationSchema,
     onSubmit: async (values) => {
-      if (!image) {
-        toast.error("Please upload an image");
-        return;
-      }
-
       setIsLoading(true);
       try {
-        const formData = new FormData();
-        formData.append("name", values.name);
-        formData.append("email", values.email);
-        formData.append("password", values.password);
-        formData.append("image", image);
-
         const res = await axios.post(
           "http://localhost:3032/student/student-sign-up",
-          formData
+          {
+            name: values.name,
+            email: values.email,
+            password: values.password
+          },
+          {
+            headers: {
+              "Content-Type": "application/json",
+            }
+          }
         );
 
         if (res.data.status) {
           toast.success("Account created successfully!");
           formik.resetForm();
-          setImage(null);
-        } else {
-          toast.error(res.data.message || "Registration failed!");
+          window.location.href = "/Home";
         }
-      } catch (error) {
-        toast.error("Something went wrong!");
+      } catch (error: any) {
+        const message = error.response?.data?.message || "Registration failed!";
+        toast.error(message);
       } finally {
         setIsLoading(false);
       }
@@ -200,19 +196,6 @@ const SignUp = () => {
               {formik.errors.password && formik.touched.password && (
                 <p className="mt-1 text-sm text-red-600">{formik.errors.password}</p>
               )}
-            </div>
-
-            {/* Image Upload */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Profile Image
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setImage(e.target.files?.[0] || null)}
-                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-              />
             </div>
 
             {/* Submit Button */}

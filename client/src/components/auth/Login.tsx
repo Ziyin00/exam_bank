@@ -87,15 +87,14 @@ const Login = () => {
               transition={{ delay: 0.2 }}
               className="mb-8"
             >
-              {/* <Image
+              <Image
                 src={LearningGif}
                 alt="Online Learning"
                 width={400}
                 height={300}
                 className="mx-auto hover:scale-105 transition-transform duration-300 rounded-lg"
                 priority
-                placeholder="blur"
-              /> */}
+              />
             </motion.div>
             <motion.h2
               initial={{ opacity: 0, y: 20 }}

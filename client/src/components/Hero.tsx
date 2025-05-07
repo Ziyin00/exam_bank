@@ -136,7 +136,7 @@ const Hero: FC<Props> = () => {
           <p className='font-Josefin_Sans dark:text-[#edfff4] text-[#000000b3] ml-0 text-[16px] -mt-8'>
             <span className='text-[#000] font-extrabold'>500K+ </span>
             People already trusted us. {' '}
-            <Link href='/courses' className='dark:text-[#46e256] text-[crimson]'>
+            <Link href='/ClientCourse' className='dark:text-[#46e256] text-[crimson]'>
               View Work sheets
             </Link>
           </p>
