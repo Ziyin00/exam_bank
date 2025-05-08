@@ -1,6 +1,5 @@
 const express = require('express')
 const { studentSignUp } = require('../controller/student/sign.up');
-const { studentLogin } = require('../controller/student/login')
 const { getCoursesByDepartment } = require('../controller/student/getCours')
 const { giveComment } = require('../controller/student/give.comment')
 const { updateStudent } = require('../controller/supperAdmin/edit.student')
@@ -10,7 +9,8 @@ const { getStudentAnswerCount } = require('../controller/student/get.answer.coun
 const { getAllCourses } = require('../controller/student/get.all.course')
 const { getCoursesByYear } = require('../controller/student/get.coursByYear')
 const { rateCourse } = require('../controller/student/reating')
-const { getCourseRating } = require('../controller/student/get.average.reating')
+const { getCourseRating } = require('../controller/student/get.average.reating');
+const { userLogin } = require('../controller/userLogin/login');
 
 const router = express.Router()
 
@@ -18,7 +18,7 @@ router.use(express.json());
 
 // post
 router.post('/student-sign-up', studentSignUp)
-router.post('/login', studentLogin)
+router.post('/login', userLogin)
 router.post('/give-comment', giveComment)
 router.post('/ask-quation', askQuestion)
 router.post('/rateing', rateCourse)

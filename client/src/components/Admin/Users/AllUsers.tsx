@@ -1,18 +1,18 @@
 "use client";
 import React, { FC, useEffect, useState } from "react";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
-import { 
-  Box, 
-  Button, 
-  Modal, 
-  TextField, 
-  Typography, 
-  Avatar, 
-  FormControl, 
-  InputLabel, 
-  Select, 
-  MenuItem, 
-  Chip 
+import {
+  Box,
+  Button,
+  Modal,
+  TextField,
+  Typography,
+  Avatar,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Chip
 } from "@mui/material";
 import { AiOutlineDelete, AiOutlineMail, AiOutlineUserAdd } from "react-icons/ai";
 import { useTheme } from "next-themes";
@@ -22,12 +22,13 @@ import axios from "axios";
 
 interface User {
   id: string;
-  full_name: string;
+  name: string;
   email: string;
   role: string;
   status: string;
   created_at: string;
   department_id?: string;
+  department_name?: string;
 }
 
 interface Department {
@@ -49,36 +50,62 @@ const AllUsers: FC = () => {
   });
   const [departments, setDepartments] = useState<Department[]>([]);
 
+  // Get role and token from local storage or context
+  const getAuthHeaders = () => {
+    const role = localStorage.getItem('role') || 'admin'; // Default to admin if not available
+    const token = localStorage.getItem(`${role}-token`);
+
+    return {
+      'role': role,
+      [`${role}-token`]: token
+    };
+  };
+
   const fetchAllUsers = async () => {
     try {
-      const [accountsRes, studentsRes, departmentsRes] = await Promise.all([
-        axios.get('http://localhost:3032/admin/get-account', { withCredentials: true }),
-        axios.get('http://localhost:3032/admin/get-student', { withCredentials: true }),
-        axios.get('http://localhost:3032/admin/get-departments', { withCredentials: true })
-      ]);
+      // Fetch admins/teachers
+      const adminRes = await axios.get('http://localhost:3032/admin/get-account', {
+        headers: getAuthHeaders(),
+        withCredentials: true
+      });
 
-      const accountUsers = accountsRes.data.users?.map((user: any) => ({
-        id: user.user_id,
-        full_name: `${user.first_name} ${user.last_name}`,
-        email: user.email,
-        role: user.role || 'teacher',
-        status: user.status,
-        created_at: user.created_at,
-        department_id: user.department_id
-      })) || [];
+      // Fetch students
+      const studentsRes = await axios.get('http://localhost:3032/admin/get-student', {
+        withCredentials: true
+      });
 
-      const studentUsers = studentsRes.data.users?.map((user: any) => ({
-        id: user.user_id,
-        full_name: `${user.first_name} ${user.last_name}`,
-        email: user.email,
+      // Fetch departments
+      const departmentsRes = await axios.get('http://localhost:3032/admin/get-departments', {
+        withCredentials: true
+      });
+
+      // Format admin/teacher data
+      const adminUser = adminRes.data.status && adminRes.data.data ? {
+        id: adminRes.data.data.id,
+        name: adminRes.data.data.name,
+        email: adminRes.data.data.email,
+        role: 'admin', // Or get from response if available
+        status: 'active', // Default value as it's not in the response
+        created_at: new Date().toISOString(), // Default as it's not in the response
+      } : [];
+
+      // Format student data
+      const studentUsers = studentsRes.data?.results?.map((student) => ({
+        id: student.id,
+        name: student.name,
+        email: student.email,
         role: 'student',
-        status: user.status,
-        created_at: user.created_at,
-        department_id: user.department_id
+        status: student.status || 'active', // Use status if available, otherwise default
+        created_at: student.created_at,
+        department_id: student.department_id,
+        department_name: student.department_name
       })) || [];
 
-      setUsers([...accountUsers, ...studentUsers]);
-      setDepartments(departmentsRes.data.departments);
+      // Combine users
+      setUsers([adminUser, ...studentUsers].filter(Boolean));
+
+      // Set departments
+      setDepartments(departmentsRes.data || []);
     } catch (error) {
       console.error('Fetch error:', error);
       toast.error("Failed to load users");
@@ -101,7 +128,10 @@ const AllUsers: FC = () => {
         email: formData.email,
         role: formData.role,
         department_id: formData.department
-      }, { withCredentials: true });
+      }, {
+        headers: getAuthHeaders(),
+        withCredentials: true
+      });
 
       await fetchAllUsers(); // Refresh all users
       setOpenModal(false);
@@ -120,7 +150,11 @@ const AllUsers: FC = () => {
         ? `http://localhost:3032/admin/delete-student/${selectedUser.id}`
         : `http://localhost:3032/admin/delete-teacher/${selectedUser.id}`;
 
-      await axios.delete(endpoint, { withCredentials: true });
+      await axios.delete(endpoint, {
+        headers: getAuthHeaders(),
+        withCredentials: true
+      });
+
       await fetchAllUsers(); // Refresh all users
       setDeleteOpen(false);
       toast.success("User deleted successfully");
@@ -135,11 +169,11 @@ const AllUsers: FC = () => {
         ? `http://localhost:3032/admin/edit-student/${userId}`
         : `http://localhost:3032/admin/edit-teacher/${userId}`;
 
-      await axios.put(endpoint, 
-        { status: newStatus }, 
-        { withCredentials: true }
+      await axios.put(endpoint,
+        { status: newStatus },
+        { headers: getAuthHeaders(), withCredentials: true }
       );
-      
+
       setUsers(users.map(u => u.id === userId ? { ...u, status: newStatus } : u));
       toast.success("Status updated successfully");
     } catch (error) {
@@ -150,12 +184,12 @@ const AllUsers: FC = () => {
   const columns: GridColDef[] = [
     { field: "id", headerName: "ID", flex: 0.3 },
     {
-      field: "full_name",
+      field: "name",
       headerName: "Name",
       flex: 0.5,
       renderCell: (params) => (
         <div className="flex items-center gap-3">
-          <Avatar>{params.value[0]}</Avatar>
+          <Avatar>{params.value?.[0] || 'U'}</Avatar>
           <div>
             <p className="font-medium">{params.value}</p>
             <p className="text-xs text-gray-500">{params.row.email}</p>
@@ -170,11 +204,17 @@ const AllUsers: FC = () => {
       renderCell: (params) => (
         <Chip
           label={params.value}
-          color={params.value === "admin" ? "primary" : 
-                params.value === "teacher" ? "secondary" : "default"}
+          color={params.value === "admin" ? "primary" :
+            params.value === "teacher" ? "secondary" : "default"}
           className="capitalize"
         />
       ),
+    },
+    {
+      field: "department_name",
+      headerName: "Department",
+      flex: 0.4,
+      valueGetter: (params) => params.row.department_name || "N/A",
     },
     {
       field: "status",
@@ -182,7 +222,7 @@ const AllUsers: FC = () => {
       flex: 0.3,
       renderCell: (params) => (
         <Select
-          value={params.value}
+          value={params.value || "active"}
           onChange={(e) => handleStatusChange(params.row.id, e.target.value, params.row.role)}
           size="small"
           className="w-32"
@@ -196,7 +236,7 @@ const AllUsers: FC = () => {
       field: "created_at",
       headerName: "Joined",
       flex: 0.4,
-      valueFormatter: (params) => format(new Date(params.value)),
+      valueFormatter: (params) => params.value ? format(new Date(params.value)) : "N/A",
     },
     {
       field: "actions",
@@ -213,8 +253,8 @@ const AllUsers: FC = () => {
           >
             <AiOutlineDelete />
           </Button>
-          <Button 
-            href={`mailto:${params.row.email}`} 
+          <Button
+            href={`mailto:${params.row.email}`}
             color="info"
             className="dark:text-blue-400"
           >
@@ -304,14 +344,14 @@ const AllUsers: FC = () => {
             </Select>
           </FormControl>
           <div className="flex justify-end gap-3">
-            <Button 
+            <Button
               onClick={() => setOpenModal(false)}
               className="dark:text-white"
             >
               Cancel
             </Button>
-            <Button 
-              variant="contained" 
+            <Button
+              variant="contained"
               onClick={handleCreateUser}
               className="dark:bg-primary dark:hover:bg-primary-dark"
             >
@@ -331,15 +371,15 @@ const AllUsers: FC = () => {
             Are you sure you want to delete this user?
           </Typography>
           <div className="flex justify-center gap-4">
-            <Button 
+            <Button
               onClick={() => setDeleteOpen(false)}
               className="dark:text-white"
             >
               Cancel
             </Button>
-            <Button 
-              variant="contained" 
-              color="error" 
+            <Button
+              variant="contained"
+              color="error"
               onClick={handleDeleteUser}
             >
               Confirm Delete

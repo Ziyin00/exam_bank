@@ -2,19 +2,38 @@ const jwt = require('jsonwebtoken');
 const connection = require('../../db');
 
 const getAccount = (req, res) => {
-    const token = req.header('a-token');
+    const role = req.header("role");
+    const token = req.header(`${role}-token`);
 
-    if (!token) {
-        return res.status(401).json({ status: false, message: "No token provided" });
+    if (!token || !role) {
+        return res.status(400).json({ status: false, message: "No token or role provided" });
     }
 
     try {
-        const decoded = jwt.verify(token, process.env.ADMIN_PASSWORD);
-        const admin_id = decoded.id;
+
+        let secretKey;
+        switch (role) {
+            case "student":
+                secretKey = process.env.STUDENT_KEY;
+                break;
+            case "teacher":
+                secretKey = process.env.TEACHER_KEY;
+                break;
+            case "admin":
+                secretKey = process.env.ADMIN_KEY;
+                break;
+            default:
+                return res.status(400).json({ status: false, message: "Invalid role" });
+        }
+
+        // Verify the token
+        const decoded = jwt.verify(token, secretKey);
+        const user_id = decoded.id;
+
 
         const sql = 'SELECT id, name, email, image FROM super_admin WHERE id = ?';
 
-        connection.query(sql, [admin_id], (err, result) => {
+        connection.query(sql, [user_id], (err, result) => {
             if (err) {
                 console.error('Query error:', err.message);
                 return res.status(500).json({ status: false, message: "Database error" });

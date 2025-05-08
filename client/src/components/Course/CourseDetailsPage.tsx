@@ -41,11 +41,12 @@ interface Review {
 }
 
 interface Question {
-  id: string;
-  text: string;
+  question_id: string;
+  question: string;
   answer?: string;
-  createdAt: string;
-  student: { name: string };
+  question_time: string;
+  student_name: string;
+  teacher_name?: string;
 }
 
 const CourseDetailsPage = () => {
@@ -60,21 +61,25 @@ const CourseDetailsPage = () => {
 
   const fetchCourseData = async () => {
     try {
+      // Get the user role from localStorage for the QA API
+      const role = localStorage.getItem('role') || 'student';
+
       const [courseRes, questionsRes, ratingRes] = await Promise.all([
         fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/student/get-cours/${id}`, {
-          headers: { 
+          headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
             'Content-Type': 'application/json'
           }
         }),
         fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/student/get-quation-answer/${id}`, {
-          headers: { 
+          headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json'
+            'role': role,
+            [`${role}-token`]: localStorage.getItem('token')
           }
         }),
         fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/student/rating/${id}`, {
-          headers: { 
+          headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
             'Content-Type': 'application/json'
           }
@@ -91,18 +96,23 @@ const CourseDetailsPage = () => {
       const questionsData = await questionsRes.json();
       const ratingData = await ratingRes.json();
 
-      // Verify backend response structure
-      if (!courseData.data || !questionsData.data || !ratingData.data) {
-        throw new Error('Invalid API response format');
-      }
+      // Map backend data to frontend format
+      const questionsMapped = questionsData.data.map((item: any) => ({
+        id: item.question_id,
+        text: item.question,
+        answer: item.answer,
+        createdAt: item.question_time,
+        student: { name: item.student_name }
+      }));
 
+      // Set course data with correctly mapped backend responses
       setCourse({
         ...courseData.data,
-        questions: questionsData.data.questions || [],
-        averageRating: ratingData.data.averageRating || 0,
+        questions: questionsMapped || [],
+        averageRating: parseFloat(ratingData.average_rating) || 0,
         reviews: courseData.data.reviews || [],
         worksheets: courseData.data.worksheets || [],
-        totalStudents: courseData.data.totalStudents || 0
+        totalStudents: courseData.data.totalStudents || ratingData.total_ratings || 0
       });
 
     } catch (err: any) {
@@ -127,15 +137,15 @@ const CourseDetailsPage = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ 
-          text: newQuestion,
+        body: JSON.stringify({
+          question: newQuestion,  // Changed from 'text' to 'question' to match backend
           courseId: id
         })
       });
 
       const responseData = await response.json();
-      
-      if (!response.ok || !responseData.success) {
+
+      if (!response.ok || !responseData.status) {  // Changed from 'success' to 'status' to match backend
         throw new Error(responseData.message || 'Question submission failed');
       }
 
@@ -157,7 +167,7 @@ const CourseDetailsPage = () => {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${localStorage.getItem('token')}`
           },
-          body: JSON.stringify({ 
+          body: JSON.stringify({
             comment: reviewComment,
             courseId: id
           })
@@ -168,9 +178,9 @@ const CourseDetailsPage = () => {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${localStorage.getItem('token')}`
           },
-          body: JSON.stringify({ 
-            rating,
-            courseId: id
+          body: JSON.stringify({
+            rating: rating,
+            course_id: id  // Changed to course_id to match the backend
           })
         })
       ]);
@@ -178,7 +188,7 @@ const CourseDetailsPage = () => {
       const reviewData = await reviewResponse.json();
       const ratingData = await ratingResponse.json();
 
-      if (!reviewResponse.ok || !ratingResponse.ok || !reviewData.success || !ratingData.success) {
+      if (!reviewResponse.ok || !ratingResponse.ok || !reviewData.status || !ratingData.status) {
         throw new Error('Review submission failed');
       }
 
@@ -200,12 +210,12 @@ const CourseDetailsPage = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ courseId: id })
+        body: JSON.stringify({ course_id: id })  // Changed from courseId to course_id
       });
 
       const responseData = await response.json();
-      
-      if (!response.ok || !responseData.success) {
+
+      if (!response.ok || !responseData.status) {  // Changed from success to status
         throw new Error(responseData.message || 'Bookmark update failed');
       }
 
@@ -248,11 +258,10 @@ const CourseDetailsPage = () => {
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`pb-3 px-1 border-b-2 ${
-                    activeTab === tab 
-                      ? 'border-blue-500 text-blue-600 dark:text-blue-400' 
+                  className={`pb-3 px-1 border-b-2 ${activeTab === tab
+                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                       : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-                  }`}
+                    }`}
                 >
                   {tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </button>
@@ -281,8 +290,6 @@ const CourseDetailsPage = () => {
                   ))}
                 </div>
               </section>
-
-              {/* <CourseContentList content={course.courseContent} /> */}
             </div>
           )}
 
@@ -443,7 +450,7 @@ const CourseDetailsPage = () => {
                   <><BsBookmark className="text-gray-600 dark:text-gray-300" /> Bookmark Course</>
                 )}
               </button>
-              
+
               <button className="w-full flex items-center justify-center gap-3 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
                 <BsChatDots className="text-gray-600 dark:text-gray-300" />
                 Contact Instructor

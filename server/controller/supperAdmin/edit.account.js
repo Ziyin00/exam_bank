@@ -21,17 +21,11 @@ const editAccount = [
     upload.single('image'),
     async (req, res) => {
 
-        const token = req.header('a-token');
-        if (!token) {
-            return res.status(400).json({ status: false, message: 'Access denied, no token provided!' });
-        }
+        const role = req.header("role");
+        const token = req.header(`${role}-token`);
 
-        let adminId;
-        try {
-            const decoded = jwt.verify(token, process.env.ADMIN_PASSWORD);
-            adminId = decoded.id;
-        } catch (err) {
-            return res.status(401).json({ status: false, message: 'Invalid or expired token!' });
+        if (!token || !role) {
+            return res.status(400).json({ status: false, message: "No token or role provided" });
         }
 
         const { name, email, password } = req.body;
@@ -42,8 +36,27 @@ const editAccount = [
         }
 
         try {
+            let secretKey;
+            switch (role) {
+                case "student":
+                    secretKey = process.env.STUDENT_KEY;
+                    break;
+                case "teacher":
+                    secretKey = process.env.TEACHER_KEY;
+                    break;
+                case "admin":
+                    secretKey = process.env.ADMIN_KEY;
+                    break;
+                default:
+                    return res.status(400).json({ status: false, message: "Invalid role" });
+            }
+
+            // Verify the token
+            const decoded = jwt.verify(token, secretKey);
+            const user_id = decoded.id;
+
             const checkEmailQuery = 'SELECT id FROM super_admin WHERE email = ? AND id != ?';
-            connection.query(checkEmailQuery, [email, adminId], (err, results) => {
+            connection.query(checkEmailQuery, [email, user_id], (err, results) => {
                 if (err) {
                     console.error(err);
                     return res.status(500).json({ status: false, message: 'Email check query error' });
@@ -84,7 +97,7 @@ const editAccount = [
                         WHERE id = ?
                     `;
 
-                    connection.query(updateQuery, [name, email, image, adminId], (err) => {
+                    connection.query(updateQuery, [name, email, image, user_id], (err) => {
                         if (err) {
                             console.error(err);
                             return res.status(500).json({ status: false, message: 'Update query error' });

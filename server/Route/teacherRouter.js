@@ -1,6 +1,5 @@
 
 const express = require('express')
-const { teacherLogin } = require('../controller/teachers/login')
 const { addCourse } = require('../controller/teachers/addCours')
 const { getAllComments } = require('../controller/teachers/get.comment')
 const { updateTeacher } = require('../controller/teachers/update.profile')
@@ -15,12 +14,13 @@ const { deleteExam } = require('../controller/teachers/delete.exams')
 const { getAllQuestionsCount } = require('../controller/teachers/quation.count')
 const { getAllCourses } = require('../controller/teachers/get.all.course')
 const { getCourseRating } = require('../controller/teachers/get.average.rating')
+const { userLogin } = require('../controller/userLogin/login')
 
 const router = express.Router()
 
 
 // post
-router.post('/login', teacherLogin)
+router.post('/login', userLogin)
 router.post('/add-cours', addCourse)
 router.post('/answer-quation', answerQuestion)
 router.post('/post-exams', postExams)

@@ -4,16 +4,35 @@ const connection = require("../../db");
 
 const rateCourse = async (req, res) => {
     const { course_id, rating } = req.body;
-    const token = req.header('s-token');
+    const role = req.header("role");
+    const token = req.header(`${role}-token`);
 
-    if (!token) {
-        return res.status(401).json({ status: false, message: 'Token not provided' });
+    if (!token || !role) {
+        return res.status(400).json({ status: false, message: "No token or role provided" });
     }
 
-    let student_id;
+
+
     try {
-        const decoded = jwt.verify(token, process.env.STUDENT_KEY);
-        student_id = decoded.id;
+        let secretKey;
+        switch (role) {
+            case "student":
+                secretKey = process.env.STUDENT_KEY;
+                break;
+            case "teacher":
+                secretKey = process.env.TEACHER_KEY;
+                break;
+            case "admin":
+                secretKey = process.env.ADMIN_KEY;
+                break;
+            default:
+                return res.status(400).json({ status: false, message: "Invalid role" });
+        }
+
+        // Verify the token
+        const decoded = jwt.verify(token, secretKey);
+        const user_id = decoded.id;
+
     } catch (err) {
         return res.status(401).json({ status: false, message: 'Invalid token' });
     }
@@ -24,7 +43,7 @@ const rateCourse = async (req, res) => {
 
     try {
         const checkQuery = `SELECT * FROM course_ratings WHERE course_id = ? AND student_id = ?`;
-        connection.query(checkQuery, [course_id, student_id], (err, results) => {
+        connection.query(checkQuery, [course_id, user_id], (err, results) => {
             if (err) return res.status(500).json({ status: false, message: 'DB error' });
 
             if (results.length > 0) {

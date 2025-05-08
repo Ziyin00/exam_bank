@@ -22,20 +22,6 @@ const studentUpdate = [
     async (req, res) => {
 
 
-        const token = req.header('s-token');
-        if (!token) {
-            return res.status(400).json({ status: false, message: 'Access denied, no token provided!' });
-        }
-
-        let student_id;
-        try {
-            const decoded = jwt.verify(token, process.env.TEACHER_PASSWORD);
-            student_id = decoded.id;
-        } catch (err) {
-            return res.status(401).json({ status: false, message: 'Invalid or expired token!' });
-        }
-
-
         const { name, email, password } = req.body;
         const image = req.file ? req.file.filename : null;
 
@@ -44,6 +30,24 @@ const studentUpdate = [
         }
 
         try {
+            let secretKey;
+            switch (role) {
+                case "student":
+                    secretKey = process.env.STUDENT_KEY;
+                    break;
+                case "teacher":
+                    secretKey = process.env.TEACHER_KEY;
+                    break;
+                case "admin":
+                    secretKey = process.env.ADMIN_KEY;
+                    break;
+                default:
+                    return res.status(400).json({ status: false, message: "Invalid role" });
+            }
+
+            // Verify the token
+            const decoded = jwt.verify(token, secretKey);
+            const user_id = decoded.id;
 
             if (password) {
                 bcrypt.hash(password, 10, (err, hashedPassword) => {
@@ -57,7 +61,7 @@ const studentUpdate = [
                         WHERE id = ?
                     `;
 
-                    connection.query(sql, [name, email, hashedPassword, image, student_id], (err) => {
+                    connection.query(sql, [name, email, hashedPassword, image, user_id], (err) => {
                         if (err) {
                             console.error(err.message);
                             return res.status(500).json({ status: false, message: 'Database update error' });
@@ -74,7 +78,7 @@ const studentUpdate = [
                     WHERE id = ?
                 `;
 
-                connection.query(sql, [name, email, image, student_id], (err) => {
+                connection.query(sql, [name, email, image, user_id], (err) => {
                     if (err) {
                         console.error(err.message);
                         return res.status(500).json({ status: false, message: 'Database update error' });

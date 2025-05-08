@@ -1,7 +1,6 @@
 const express = require('express')
 const { addCategory } = require('../controller/supperAdmin/add.category')
 const { getCategory } = require('../controller/supperAdmin/get.category')
-const { adminLogin } = require('../controller/supperAdmin/login')
 const { addAccount } = require('../controller/supperAdmin/addAccount')
 const { addDepartment } = require('../controller/supperAdmin/add.dipartment')
 const { getDepartment } = require('../controller/supperAdmin/get.department')
@@ -15,6 +14,7 @@ const { editAccount } = require('../controller/supperAdmin/edit.account')
 const { getAccount } = require('../controller/supperAdmin/get.account')
 const { getAllCourses } = require('../controller/supperAdmin/get.all.course')
 const { getCourseRating } = require('../controller/supperAdmin/get.average.rating')
+const { userLogin } = require('../controller/userLogin/login')
 
 
 const router = express.Router()
@@ -22,7 +22,7 @@ const router = express.Router()
 // posts
 
 router.post('/add-category', addCategory)
-router.post('/login', adminLogin)
+router.post('/login', userLogin)
 router.post('/add-account', addAccount)
 router.post('/add-department', addDepartment)
 router.post('/add-teachers', addTeachers)

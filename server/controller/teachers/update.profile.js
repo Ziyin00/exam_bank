@@ -21,17 +21,11 @@ const updateTeacher = [
     upload.single('image'),
     async (req, res) => {
 
-        const token = req.header('t-token');
-        if (!token) {
-            return res.status(400).json({ status: false, message: 'Access denied, no token provided!' });
-        }
+        const role = req.header("role");
+        const token = req.header(`${role}-token`);
 
-        let teacher_id;
-        try {
-            const decoded = jwt.verify(token, process.env.TEACHER_KEY);
-            teacher_id = decoded.id;
-        } catch (err) {
-            return res.status(401).json({ status: false, message: 'Invalid or expired token!' });
+        if (!token || !role) {
+            return res.status(400).json({ status: false, message: "No token or role provided" });
         }
 
         const { name, email, password } = req.body;
@@ -42,6 +36,25 @@ const updateTeacher = [
         }
 
         try {
+            // Determine the correct secret key based on the role
+            let secretKey;
+            switch (role) {
+                case "student":
+                    secretKey = process.env.STUDENT_KEY;
+                    break;
+                case "teacher":
+                    secretKey = process.env.TEACHER_KEY;
+                    break;
+                case "admin":
+                    secretKey = process.env.ADMIN_KEY;
+                    break;
+                default:
+                    return res.status(400).json({ status: false, message: "Invalid role" });
+            }
+
+            // Verify the token
+            const decoded = jwt.verify(token, secretKey);
+            const user_id = decoded.id;
 
             if (password) {
                 bcrypt.hash(password, 10, (err, hashedPassword) => {
@@ -55,7 +68,7 @@ const updateTeacher = [
                         WHERE id = ?
                     `;
 
-                    connection.query(sql, [name, email, hashedPassword, image, teacher_id], (err) => {
+                    connection.query(sql, [name, email, hashedPassword, image, user_id], (err) => {
                         if (err) {
                             console.error(err.message);
                             return res.status(500).json({ status: false, message: 'Database update error' });
@@ -72,7 +85,7 @@ const updateTeacher = [
                     WHERE id = ?
                 `;
 
-                connection.query(sql, [name, email, image, teacher_id], (err) => {
+                connection.query(sql, [name, email, image, user_id], (err) => {
                     if (err) {
                         console.error(err.message);
                         return res.status(500).json({ status: false, message: 'Database update error' });

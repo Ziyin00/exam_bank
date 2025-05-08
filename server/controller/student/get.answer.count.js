@@ -2,15 +2,33 @@ const connection = require("../../db");
 const jwt = require("jsonwebtoken");
 
 const getStudentAnswerCount = (req, res) => {
-    const token = req.header("s-token");
+    const role = req.header("role");
+    const token = req.header(`${role}-token`);
 
-    if (!token) {
-        return res.status(401).json({ status: false, message: "No token provided" });
+    if (!token || !role) {
+        return res.status(400).json({ status: false, message: "No token or role provided" });
     }
 
     try {
-        const decoded = jwt.verify(token, process.env.STUDENT_KEY);
-        const student_id = decoded.id;
+        // Determine the correct secret key based on the role
+        let secretKey;
+        switch (role) {
+            case "student":
+                secretKey = process.env.STUDENT_KEY;
+                break;
+            case "teacher":
+                secretKey = process.env.TEACHER_KEY;
+                break;
+            case "admin":
+                secretKey = process.env.ADMIN_KEY;
+                break;
+            default:
+                return res.status(400).json({ status: false, message: "Invalid role" });
+        }
+
+        // Verify the token
+        const decoded = jwt.verify(token, secretKey);
+        const user_id = decoded.id;
 
         const sql = `
             SELECT COUNT(a.id) AS answer_count
@@ -19,7 +37,7 @@ const getStudentAnswerCount = (req, res) => {
             WHERE q.student_id = ?
         `;
 
-        connection.query(sql, [student_id], (err, result) => {
+        connection.query(sql, [user_id], (err, result) => {
             if (err) {
                 console.error("DB error:", err.message);
                 return res.status(500).json({ status: false, message: "Database error" });
