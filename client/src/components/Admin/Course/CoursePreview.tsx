@@ -1,130 +1,74 @@
-// CoursePreview.tsx
-import React from 'react';
-import axios from 'axios';
+// components/course/CoursePreview.tsx
+import { CourseFormData } from '@/src/types/course';
 import { motion } from 'framer-motion';
-import { FiCheckCircle, FiEdit, FiExternalLink } from 'react-icons/fi';
-import { BsLink45Deg } from 'react-icons/bs';
 
 interface CoursePreviewProps {
-  data: any;
+  formData: CourseFormData;
   onBack: () => void;
   isLoading: boolean;
-  setIsLoading: (value: boolean) => void;
+  onPublish: () => Promise<void>;
 }
 
 const CoursePreview: React.FC<CoursePreviewProps> = ({
-  data,
+  formData,
   onBack,
   isLoading,
-  setIsLoading,
+  onPublish
 }) => {
-  const handlePublish = async () => {
-    try {
-      setIsLoading(true);
-      const res = await axios.post('http://localhost:3032/teacher/add-cours', data);
-      console.log('✅ Course published:', res.data);
-      alert('Course published successfully!');
-    } catch (error) {
-      console.error('❌ Failed to publish course:', error);
-      alert('Failed to publish the course. Check console for details.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="max-w-3xl mx-auto p-8 bg-white dark:bg-gray-800 rounded-xl shadow-lg"
+      className="space-y-8"
     >
-      <div className="space-y-8">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Course Preview</h2>
-          <button
-            onClick={onBack}
-            className="flex items-center gap-2 text-blue-500 hover:text-blue-700"
-          >
-            <FiEdit /> Edit
-          </button>
+      <h2 className="text-2xl font-bold">Course Preview</h2>
+      
+      <div className="space-y-6">
+        {/* Preview all course data */}
+        <div>
+          <h3>{formData.title}</h3>
+          <p>{formData.description}</p>
         </div>
 
-        <div className="space-y-6">
-          <div className="space-y-2">
-            <h3 className="text-xl font-semibold">{data.name}</h3>
-            <p className="text-gray-600 dark:text-gray-300">{data.description}</p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
-              <h4 className="font-semibold mb-2">Category</h4>
-              <p>{data.category}</p>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <h4 className="text-lg font-semibold">Benefits</h4>
-            <ul className="list-disc pl-6 space-y-2">
-              {data.benefits.map((benefit: any, index: number) => (
-                <li key={index}>{benefit.title}</li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="space-y-4">
-            <h4 className="text-lg font-semibold">Prerequisites</h4>
-            <ul className="list-disc pl-6 space-y-2">
-              {data.prerequisites.map((prerequisite: any, index: number) => (
-                <li key={index}>{prerequisite.title}</li>
-              ))}
-            </ul>
-          </div>
-
-          {data.courseContent.map((section: any, index: number) => (
-            <div key={index} className="space-y-4 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
-              <div className="flex items-center justify-between">
-                <h4 className="text-lg font-semibold">{section.section}</h4>
-                {section.imageUrl && (
-                  <img
-                    src={section.imageUrl}
-                    alt={section.title}
-                    className="w-32 h-20 object-cover rounded"
-                  />
-                )}
-              </div>
-              <p>{section.description}</p>
-              {section.links.map((link: any, linkIndex: number) => (
-                <div key={linkIndex} className="flex items-center gap-2">
-                  <BsLink45Deg />
-                  <a
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-500 hover:underline flex items-center gap-1"
-                  >
-                    {link.title} <FiExternalLink />
-                  </a>
-                </div>
-              ))}
-            </div>
-          ))}
+        <div className="grid grid-cols-2 gap-4">
+          <div>Category: {formData.categoryId}</div>
+          <div>Department: {formData.departmentId}</div>
         </div>
 
-        <div className="flex justify-between mt-8">
-          <button
-            onClick={onBack}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800 dark:hover:text-gray-400"
-          >
+        <div>
+          <h4>Benefits</h4>
+          <ul>
+            <li>{formData.benefit1}</li>
+            {formData.benefit2 && <li>{formData.benefit2}</li>}
+          </ul>
+        </div>
+
+        <div>
+          <h4>Prerequisites</h4>
+          <ul>
+            <li>{formData.prerequisite1}</li>
+            {formData.prerequisite2 && <li>{formData.prerequisite2}</li>}
+          </ul>
+        </div>
+
+        {formData.courseContent.map((section, idx) => (
+          <div key={idx} className="p-4 border rounded">
+            <h5>{section.section}</h5>
+            <p>{section.description}</p>
+            {section.links.map((link, linkIdx) => (
+              <a key={linkIdx} href={link.url} target="_blank" rel="noreferrer">
+                {link.title}
+              </a>
+            ))}
+          </div>
+        ))}
+
+        <div className="flex justify-between">
+          <button onClick={onBack} disabled={isLoading}>
             Back
           </button>
-          <button
-            onClick={handlePublish}
-            disabled={isLoading}
-            className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg flex items-center gap-2"
-          >
-            {isLoading ? 'Publishing...' : <>
-              <FiCheckCircle /> Publish Course
-            </>}
+          <button onClick={onPublish} disabled={isLoading}>
+            {isLoading ? 'Publishing...' : 'Publish Course'}
           </button>
         </div>
       </div>

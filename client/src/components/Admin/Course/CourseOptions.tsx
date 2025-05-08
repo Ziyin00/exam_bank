@@ -1,59 +1,53 @@
-// CourseOptions.tsx
-import React from 'react';
+// components/course/CourseOptions.tsx
+import { Progress } from '@react-three/drei';
 import { motion } from 'framer-motion';
 
 interface CourseOptionsProps {
-  activeStep: number;
-  setActiveStep: (step: number) => void;
+  active: number;
+  setActive: (step: number) => void;
+  progress: number;
 }
 
-const CourseOptions: React.FC<CourseOptionsProps> = ({ activeStep, setActiveStep }) => {
-  const steps = [
-    'Course Information',
-    'Course Data',
-    'Course Content',
-    'Preview & Publish'
-  ];
+const steps = [
+  { title: 'Basic Info', description: 'Course fundamentals' },
+  { title: 'Requirements', description: 'Benefits & prerequisites' },
+  { title: 'Content', description: 'Course structure' },
+  { title: 'Preview', description: 'Final review' }
+];
 
+const CourseOptions = ({ active, setActive, progress }: CourseOptionsProps) => {
   return (
     <motion.div
-      initial={{ opacity: 0, x: 50 }}
-      animate={{ opacity: 1, x: 0 }}
-      className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-6"
     >
-      <h3 className="text-lg font-semibold mb-4">Creation Progress</h3>
+      <div className="space-y-2">
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Course Progress</h3>
+        <Progress value={progress} className="h-2 bg-gray-200 dark:bg-gray-800" />
+        <p className="text-sm text-gray-600 dark:text-gray-400">
+          {Math.round(progress)}% complete
+        </p>
+      </div>
+
       <div className="space-y-4">
-        {steps.map((step, index) => (
-          <div
-            key={step}
-            onClick={() => index < activeStep && setActiveStep(index)}
-            className={`cursor-pointer ${index < activeStep ? 'cursor-pointer' : 'cursor-default'}`}
-          >
-            <div className="flex items-center gap-3">
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
-                  index <= activeStep
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-200 dark:bg-gray-700 text-gray-500'
-                }`}
-              >
-                {index < activeStep ? '✓' : index + 1}
-              </div>
-              <span className={`${
-                index === activeStep
-                  ? 'font-medium text-blue-500'
-                  : 'text-gray-600 dark:text-gray-400'
-              }`}>
-                {step}
-              </span>
-            </div>
-            {index < steps.length - 1 && (
-              <div className={`h-8 ml-4 border-l ${
-                index < activeStep ? 'border-blue-500' : 'border-gray-200 dark:border-gray-700'
-              }`} />
-            )}
-          </div>
-        ))}
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Steps</h3>
+        <nav className="space-y-2">
+          {steps.map((step, index) => (
+            <button
+              key={step.title}
+              onClick={() => setActive(index)}
+              className={`w-full text-left p-4 rounded-lg transition-colors ${
+                active === index
+                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300'
+                  : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
+              }`}
+            >
+              <div className="font-medium">{step.title}</div>
+              <div className="text-sm">{step.description}</div>
+            </button>
+          ))}
+        </nav>
       </div>
     </motion.div>
   );

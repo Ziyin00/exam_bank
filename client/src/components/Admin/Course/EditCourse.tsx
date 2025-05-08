@@ -1,174 +1,184 @@
 'use client';
-import React, { FC, useEffect, useState } from "react";
+import { FC, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import CourseInformation from "./CourseInformation";
-import CourseOptions from "./CourseOptions";
-import CourseData from "./CourseData";
-import CourseContent from "./CourseContent";
-import CoursePreview from "./CoursePreview";
-
 import { useRouter } from "next/navigation";
-import { FiAlertTriangle, FiRefreshCw } from "react-icons/fi";
+import axios from "axios";
 import { useToast } from "../../ui/use-toast";
 import { ProgressBar } from "../../ui/progress";
 import { ConfirmationModal } from "../../ui/confirmation-modal";
+import CourseInformation from "./CourseInformation";
+import CourseData from "./CourseData";
+import CourseContent from "./CourseContent";
+import CoursePreview from "./CoursePreview";
+import { CourseFormData } from "@/src/types/course";
 
-type Props = {
+interface EditCourseProps {
   id: string;
-};
+}
 
-const EditCourse: FC<Props> = ({ id }) => {
+const EditCourse: FC<EditCourseProps> = ({ id }) => {
   const { toast } = useToast();
   const router = useRouter();
- 
-  
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [active, setActive] = useState(0);
+  const [activeStep, setActiveStep] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Consolidated form state
-  const [formData, setFormData] = useState({
-    courseInfo: {
-      name: "",
-      description: "",
-      price: "",
-      estimatedPrice: "",
-      tags: [] as string[],
-      level: "",
-      demoUrl: "",
-    },
-    benefits: [{ title: "" }],
-    prerequisites: [{ title: "" }],
+  const [formData, setFormData] = useState<CourseFormData>({
+    title: "",
+    description: "",
+    categoryId: 0,
+    departmentId: 0,
+    tag: "",
+    benefit1: "",
+    benefit2: "",
+    prerequisite1: "",
+    prerequisite2: "",
+    imageFile: undefined,
     courseContent: [{
-      videoUrl: "",
-      title: "",
+      section: "Section 1",
       description: "",
-      videoSection: "Untitled Section",
-      links: [{ title: "", url: "" }],
-      suggestion: "",
+      links: []
     }]
   });
 
-  // Load course data
   useEffect(() => {
-    const editCourseData = data?.find((i: any) => i._id === id);
-    if (editCourseData) {
-      setFormData({
-        courseInfo: {
-          name: editCourseData.name,
-          description: editCourseData.description,
-          price: editCourseData.price,
-          estimatedPrice: editCourseData.estimatedPrice,
-          tags: editCourseData.tags,
-          level: editCourseData.level,
-          demoUrl: editCourseData.demoUrl,
-        },
-        benefits: editCourseData.benefits || [{ title: "" }],
-        prerequisites: editCourseData.prerequisites || [{ title: "" }],
-        courseContent: editCourseData.courseData || [{
-          videoUrl: "",
-          title: "",
-          description: "",
-          videoSection: "Untitled Section",
-          links: [{ title: "", url: "" }],
-          suggestion: "",
-        }]
-      });
-    }
-  }, [data, id]);
-
-  // Progress calculation
-  useEffect(() => {
-    const calculateProgress = () => {
-      let filledFields = 0;
-      let totalFields = 0;
-
-      // Course Info
-      Object.values(formData.courseInfo).forEach(value => {
-        totalFields++;
-        if (value) filledFields++;
-      });
-
-      // Benefits & Prerequisites
-      [formData.benefits, formData.prerequisites].forEach(array => {
-        array.forEach(item => {
-          totalFields++;
-          if (item.title) filledFields++;
+    const fetchCourseData = async () => {
+      try {
+        const response = await axios.get(`/api/courses/${id}`);
+        const data = response.data;
+        
+        setFormData({
+          title: data.title,
+          description: data.description,
+          categoryId: data.category_id,
+          departmentId: data.department_id,
+          tag: data.course_tag,
+          benefit1: data.benefit1,
+          benefit2: data.benefit2,
+          prerequisite1: data.prerequisite1,
+          prerequisite2: data.prerequisite2,
+          courseContent: data.courseContent.map((section: any) => ({
+            section: section.section,
+            description: section.description,
+            links: section.links
+          }))
         });
-      });
-
-      // Course Content
-      formData.courseContent.forEach(content => {
-        totalFields += 4;
-        if (content.title) filledFields++;
-        if (content.description) filledFields++;
-        if (content.videoUrl) filledFields++;
-        content.links.forEach(link => {
-          totalFields += 2;
-          if (link.title) filledFields++;
-          if (link.url) filledFields++;
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Error Loading Course",
+          description: "Failed to fetch course data"
         });
-      });
-
-      setProgress((filledFields / totalFields) * 100);
+      }
     };
 
+    fetchCourseData();
+  }, [id, toast]);
+
+  const calculateProgress = () => {
+    const requiredFields = [
+      formData.title,
+      formData.description,
+      formData.categoryId,
+      formData.departmentId,
+      formData.tag,
+      formData.benefit1,
+      formData.prerequisite1,
+      formData.courseContent[0]?.section,
+      formData.courseContent[0]?.description
+    ];
+
+    const filledFields = requiredFields.filter(field => 
+      field !== undefined && field !== null && field !== ""
+    ).length;
+
+    setProgress(Math.round((filledFields / requiredFields.length) * 100));
+  };
+
+  useEffect(() => {
     calculateProgress();
   }, [formData]);
 
-  // Handle API responses
-  useEffect(() => {
-    if (isSuccess) {
-      toast({
-        title: "Course Updated Successfully",
-        description: "Your changes have been saved",
+  const handleUpdateCourse = async () => {
+    setIsLoading(true);
+    try {
+      const form = new FormData();
+      
+      // Append updated fields
+      form.append("title", formData.title);
+      form.append("description", formData.description);
+      form.append("category_id", formData.categoryId.toString());
+      form.append("department_id", formData.departmentId.toString());
+      form.append("course_tag", formData.tag);
+      form.append("benefit1", formData.benefit1);
+      form.append("benefit2", formData.benefit2);
+      form.append("prerequisite1", formData.prerequisite1);
+      form.append("prerequisite2", formData.prerequisite2);
+
+      if (formData.imageFile) {
+        form.append("image", formData.imageFile);
+      }
+
+      // Process links
+      const allLinks = formData.courseContent.flatMap(section => 
+        section.links.map(link => ({
+          link_name: link.title,
+          link: link.url
+        }))
+      );
+      form.append("links", JSON.stringify(allLinks));
+
+      await axios.put(`/api/courses/${id}`, form, {
+        headers: { "Content-Type": "multipart/form-data" }
       });
-      router.push("/admin/courses");
-      refetch();
-    }
-    if (error) {
+
+      toast({
+        title: "Course Updated",
+        description: "Your changes have been saved successfully"
+      });
+      router.push("/teacher/courses");
+    } catch (error) {
       toast({
         variant: "destructive",
-        title: "Update Error",
-        description: "There was an error updating the course",
+        title: "Update Failed",
+        description: "Error saving course changes"
       });
+    } finally {
+      setIsLoading(false);
     }
-  }, [isSuccess, error, router, refetch, toast]);
+  };
 
-  // Form validation
   const validateStep = (step: number) => {
     switch (step) {
       case 0:
-        if (!formData.courseInfo.name.trim()) {
+        if (!formData.title || !formData.categoryId || !formData.departmentId) {
           toast({
             variant: "destructive",
-            title: "Missing Course Name",
-            description: "Please provide a title for your course",
+            title: "Missing Required Fields",
+            description: "Please fill in all basic course information"
           });
           return false;
         }
         return true;
       case 1:
-        const emptyBenefits = formData.benefits.filter(b => !b.title.trim());
-        const emptyPrereqs = formData.prerequisites.filter(p => !p.title.trim());
-        if (emptyBenefits.length > 0 || emptyPrereqs.length > 0) {
+        if (!formData.benefit1 || !formData.prerequisite1) {
           toast({
             variant: "destructive",
-            title: "Incomplete Fields",
-            description: `Please fill ${emptyBenefits.length} benefit and ${emptyPrereqs.length} prerequisite fields`,
+            title: "Missing Requirements",
+            description: "Please fill at least one benefit and prerequisite"
           });
           return false;
         }
         return true;
       case 2:
-        const invalidContent = formData.courseContent.filter(
-          c => !c.title.trim() || !c.description.trim() || !c.videoUrl
-        );
-        if (invalidContent.length > 0) {
+        if (formData.courseContent.some(section => 
+          !section.section || !section.description
+        )) {
           toast({
             variant: "destructive",
-            title: "Incomplete Content",
-            description: `${invalidContent.length} modules need attention`,
+            title: "Incomplete Sections",
+            description: "All sections must have a title and description"
           });
           return false;
         }
@@ -178,133 +188,85 @@ const EditCourse: FC<Props> = ({ id }) => {
     }
   };
 
-  // Handle step navigation
   const handleNextStep = () => {
-    if (validateStep(active)) {
-      setActive(prev => Math.min(prev + 1, 3));
+    if (validateStep(activeStep)) {
+      setActiveStep(prev => Math.min(prev + 1, 3));
     }
   };
 
-  // Handle form submission
-  const handleSubmit = async () => {
-    const formattedData = {
-      ...formData.courseInfo,
-      benefits: formData.benefits,
-      prerequisites: formData.prerequisites,
-      courseData: formData.courseContent.map(content => ({
-        ...content,
-        links: content.links.map(link => ({
-          title: link.title,
-          url: link.url
-        }))
-      }))
-    };
-
-    try {
-      await editCourse({ id, data: formattedData });
-    } catch (err) {
-      console.error("Update error:", err);
-    }
+  const handlePrevStep = () => {
+    setActiveStep(prev => Math.max(prev - 1, 0));
   };
 
   return (
-    <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="min-h-screen bg-background"
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Main Content */}
-          <div className="flex-1">
-            <div className="bg-card rounded-2xl shadow-xl p-6 mb-6 border">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-                <div>
-                  <h1 className="text-3xl font-bold text-foreground">
-                    Edit Course: {formData.courseInfo.name}
-                  </h1>
-                  <div className="mt-2 flex items-center gap-2">
-                    <ProgressBar value={progress} className="w-[200px]" />
-                    <span className="text-sm text-muted-foreground">
-                      {Math.round(progress)}% Complete
-                    </span>
-                  </div>
-                </div>
+    <div className="max-w-7xl mx-auto p-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold">Edit Course: {formData.title}</h1>
+        <div className="mt-4 flex items-center gap-4">
+          <ProgressBar value={progress} className="w-48" />
+          <span className="text-sm text-muted-foreground">
+            {Math.round(progress)}% Complete
+          </span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div className="lg:col-span-3">
+          {activeStep === 0 && (
+            <CourseInformation
+              formData={formData}
+              setFormData={setFormData}
+              onNext={handleNextStep}
+              isEditMode
+            />
+          )}
+
+          {activeStep === 1 && (
+            <CourseData
+              formData={formData}
+              setFormData={setFormData}
+              onNext={handleNextStep}
+              onBack={handlePrevStep}
+            />
+          )}
+
+          {activeStep === 2 && (
+            <CourseContent
+              formData={formData}
+              setFormData={setFormData}
+              onNext={handleNextStep}
+              onBack={handlePrevStep}
+            />
+          )}
+
+          {activeStep === 3 && (
+            <CoursePreview
+              formData={formData}
+              onBack={handlePrevStep}
+              isLoading={isLoading}
+              onPublish={() => setShowConfirmation(true)}
+              isEdit
+            />
+          )}
+        </div>
+
+        <div className="lg:col-span-1">
+          <div className="sticky top-24 bg-card p-4 rounded-lg border">
+            <h3 className="font-semibold mb-4">Edit Progress</h3>
+            <div className="space-y-2">
+              {["Basic Info", "Requirements", "Content", "Preview"].map((label, index) => (
                 <button
-                  onClick={() => router.refresh()}
-                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+                  key={label}
+                  onClick={() => setActiveStep(index)}
+                  className={`w-full text-left p-2 rounded ${
+                    activeStep === index
+                      ? "bg-primary text-primary-foreground"
+                      : "hover:bg-accent"
+                  }`}
                 >
-                  <FiRefreshCw className="h-4 w-4" />
-                  Refresh Data
+                  {label}
                 </button>
-              </div>
-
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={active}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  {active === 0 && (
-                    <CourseInformation
-                      courseInfo={formData.courseInfo}
-                      setCourseInfo={(data) => setFormData(prev => ({
-                        ...prev,
-                        courseInfo: { ...prev.courseInfo, ...data }
-                      }))}
-                      handleNextStep={handleNextStep}
-                    />
-                  )}
-
-                  {active === 1 && (
-                    <CourseData
-                      benefits={formData.benefits}
-                      setBenefits={(data) => setFormData(prev => ({
-                        ...prev, benefits: data
-                      }))}
-                      prerequisites={formData.prerequisites}
-                      setPrerequisites={(data) => setFormData(prev => ({
-                        ...prev, prerequisites: data
-                      }))}
-                      handleNextStep={handleNextStep}
-                    />
-                  )}
-
-                  {active === 2 && (
-                    <CourseContent
-                      courseContentData={formData.courseContent}
-                      setCourseContentData={(data) => setFormData(prev => ({
-                        ...prev, courseContent: data
-                      }))}
-                      handleSubmit={handleSubmit}
-                    />
-                  )}
-
-                  {active === 3 && (
-                    <CoursePreview
-                      courseData={formData}
-                      handleCourseCreate={() => setShowConfirmation(true)}
-                      isEdit
-                    />
-                  )}
-                </motion.div>
-              </AnimatePresence>
-            </div>
-          </div>
-
-          {/* Progress Sidebar */}
-          <div className="lg:w-80 lg:mt-24">
-            <div className="sticky top-24 bg-card rounded-2xl shadow-xl p-6 border">
-              <CourseOptions active={active} setActive={setActive} />
-              
-              <div className="mt-4 p-3 bg-warning/10 rounded-lg flex items-center gap-2">
-                <FiAlertTriangle className="h-4 w-4 text-warning" />
-                <span className="text-sm text-warning">
-                  Auto-save enabled - {Math.round(progress)}% complete
-                </span>
-              </div>
+              ))}
             </div>
           </div>
         </div>
@@ -313,13 +275,13 @@ const EditCourse: FC<Props> = ({ id }) => {
       <ConfirmationModal
         isOpen={showConfirmation}
         onClose={() => setShowConfirmation(false)}
-        onConfirm={handleSubmit}
-        title="Confirm Course Update"
+        onConfirm={handleUpdateCourse}
+        title="Confirm Course Updates"
         description="Are you sure you want to save these changes?"
-        // confirmText={isLoading ? "Saving..." : "Confirm Update"}
-        // isLoading={isLoading}
+        confirmText={isLoading ? "Saving..." : "Confirm Changes"}
+        isLoading={isLoading}
       />
-    </motion.div>
+    </div>
   );
 };
 

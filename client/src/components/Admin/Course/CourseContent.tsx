@@ -1,61 +1,46 @@
-// CourseContent.tsx
-import React, { useCallback, useState } from 'react';
+'use client'
+
+// components/course/CourseContent.tsx
+'use client';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AiOutlineCloudUpload, AiOutlineDelete } from 'react-icons/ai';
-import { BsLink45Deg } from 'react-icons/bs';
-import { FiArrowLeft, FiArrowRight, FiEdit, FiPlus } from 'react-icons/fi';
-import toast from 'react-hot-toast';
+import { FiPlus, FiTrash2, FiLink } from 'react-icons/fi';
+import { useToast } from '../../ui/use-toast';
+import { useState } from 'react';
 
 interface CourseContentProps {
-  content: any[];
-  setContent: React.Dispatch<React.SetStateAction<any[]>>;
+  formData: any;
+  setFormData: (data: any) => void;
   onNext: () => void;
   onBack: () => void;
 }
 
-const CourseContent: React.FC<CourseContentProps> = ({
-  content,
-  setContent,
-  onNext,
-  onBack
-}) => {
+const CourseContent = ({ formData, setFormData, onNext, onBack }: CourseContentProps) => {
+  const { toast } = useToast();
   const [activeSection, setActiveSection] = useState(0);
-  const [imageInputMode, setImageInputMode] = useState<'upload' | 'url'>('upload');
 
-  const handleImageUpload = useCallback((index: number, file: File) => {
-    if (!file.type.startsWith('image/')) {
-      toast.error('Only image files are allowed');
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image size must be less than 5MB');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const updated = [...content];
-      updated[index].imageUrl = reader.result;
-      setContent(updated);
-    };
-    reader.readAsDataURL(file);
-  }, [content, setContent]);
-
-  const addNewSection = () => {
-    setContent([...content, {
-      imageUrl: '',
-      title: '',
-      description: '',
-      section: `Section ${content.length + 1}`,
-      links: [{ title: '', url: '' }]
-    }]);
-    setActiveSection(content.length);
+  const addSection = () => {
+    setFormData({
+      ...formData,
+      courseContent: [
+        ...formData.courseContent,
+        {
+          section: `Section ${formData.courseContent.length + 1}`,
+          description: '',
+          links: []
+        }
+      ]
+    });
+    setActiveSection(formData.courseContent.length);
   };
 
-  const validateSection = (index: number) => {
-    const section = content[index];
-    if (!section.title.trim() || !section.description.trim()) {
-      toast.error('Please fill all required fields in current section');
+  const validateSection = () => {
+    const current = formData.courseContent[activeSection];
+    if (!current.section.trim() || !current.description.trim()) {
+      toast({
+        variant: 'destructive',
+        title: 'Missing Fields',
+        description: 'Please fill all required section fields'
+      });
       return false;
     }
     return true;
@@ -63,210 +48,151 @@ const CourseContent: React.FC<CourseContentProps> = ({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 50 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="max-w-3xl mx-auto p-8 bg-white dark:bg-gray-800 rounded-xl shadow-lg"
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="space-y-8 p-6 bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-800"
     >
-      <div className="space-y-8">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Course Content</h2>
+      <div className="flex justify-between items-center">
+        <h2 className="text-3xl font-bold text-gray-800 dark:text-white">Course Content</h2>
+        <button
+          onClick={addSection}
+          className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg flex items-center gap-2"
+        >
+          <FiPlus className="h-4 w-4" />
+          New Section
+        </button>
+      </div>
+
+      <div className="flex gap-4 overflow-x-auto pb-4">
+        {formData.courseContent.map((section: any, index: number) => (
           <button
-            onClick={addNewSection}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg flex items-center gap-2"
+            key={index}
+            onClick={() => setActiveSection(index)}
+            className={`px-4 py-2 rounded-lg flex-shrink-0 ${
+              activeSection === index
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+            }`}
           >
-            <FiPlus /> New Section
+            Section {index + 1}
           </button>
-        </div>
+        ))}
+      </div>
 
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {content.map((section, index) => (
-            <button
-              key={index}
-              onClick={() => setActiveSection(index)}
-              className={`px-4 py-2 rounded-lg ${
-                activeSection === index
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white'
-              }`}
-            >
-              Section {index + 1}
-            </button>
-          ))}
-        </div>
-
-        <AnimatePresence mode="wait">
-          {content.map((section, index) => activeSection === index && (
+      <AnimatePresence mode="wait">
+        {formData.courseContent.map((section: any, index: number) => (
+          activeSection === index && (
             <motion.div
               key={index}
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -50 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
               className="space-y-6"
             >
               <div className="space-y-4">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Section Title
+                  Section Title *
                 </label>
                 <input
-                  type="text"
-                  placeholder="Enter section title"
-                  className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600"
-                  value={section.title}
-                  onChange={e => {
-                    const updated = [...content];
-                    updated[index].title = e.target.value;
-                    setContent(updated);
+                  value={section.section}
+                  onChange={(e) => {
+                    const updated = [...formData.courseContent];
+                    updated[index].section = e.target.value;
+                    setFormData({ ...formData, courseContent: updated });
                   }}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-transparent text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               <div className="space-y-4">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Section Image
-                </label>
-                <div className="flex gap-4 mb-4">
-                  <button
-                    onClick={() => setImageInputMode('upload')}
-                    className={`px-4 py-2 rounded-lg ${
-                      imageInputMode === 'upload'
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-gray-100 dark:bg-gray-700'
-                    }`}
-                  >
-                    Upload Image
-                  </button>
-                  <button
-                    onClick={() => setImageInputMode('url')}
-                    className={`px-4 py-2 rounded-lg ${
-                      imageInputMode === 'url'
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-gray-100 dark:bg-gray-700'
-                    }`}
-                  >
-                    Image URL
-                  </button>
-                </div>
-
-                {imageInputMode === 'upload' ? (
-                  <div className="border-2 border-dashed rounded-lg p-8 text-center">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      id="file-upload"
-                      onChange={e => e.target.files?.[0] && handleImageUpload(index, e.target.files[0])}
-                    />
-                    <label
-                      htmlFor="file-upload"
-                      className="cursor-pointer flex flex-col items-center gap-4"
-                    >
-                      <AiOutlineCloudUpload className="text-4xl" />
-                      {section.imageUrl ? 'Change Image' : 'Upload Section Image'}
-                    </label>
-                  </div>
-                ) : (
-                  <input
-                    type="text"
-                    placeholder="Enter image URL"
-                    className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600"
-                    value={section.imageUrl}
-                    onChange={e => {
-                      const updated = [...content];
-                      updated[index].imageUrl = e.target.value;
-                      setContent(updated);
-                    }}
-                  />
-                )}
-              </div>
-
-              <div className="space-y-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Section Description
+                  Section Description *
                 </label>
                 <textarea
-                  rows={4}
-                  placeholder="Describe this section..."
-                  className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600"
                   value={section.description}
-                  onChange={e => {
-                    const updated = [...content];
+                  onChange={(e) => {
+                    const updated = [...formData.courseContent];
                     updated[index].description = e.target.value;
-                    setContent(updated);
+                    setFormData({ ...formData, courseContent: updated });
                   }}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-transparent text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500"
+                  rows={4}
                 />
               </div>
 
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">Resources & Links</h3>
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-medium text-gray-800 dark:text-white">
+                    Resources & Links
+                  </h3>
                   <button
                     onClick={() => {
-                      const updated = [...content];
+                      const updated = [...formData.courseContent];
                       updated[index].links.push({ title: '', url: '' });
-                      setContent(updated);
+                      setFormData({ ...formData, courseContent: updated });
                     }}
-                    className="flex items-center gap-2 text-blue-500"
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2"
                   >
-                    <FiPlus /> Add Link
+                    <FiPlus className="h-4 w-4" />
+                    Add Resource
                   </button>
                 </div>
 
                 {section.links.map((link: any, linkIndex: number) => (
-                  <div key={linkIndex} className="flex items-center gap-4">
-                    <BsLink45Deg className="text-xl" />
+                  <div key={linkIndex} className="flex gap-4 items-center">
+                    <FiLink className="text-gray-500 dark:text-gray-400" />
                     <input
-                      type="text"
-                      placeholder="Link title"
-                      className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600"
                       value={link.title}
-                      onChange={e => {
-                        const updated = [...content];
+                      onChange={(e) => {
+                        const updated = [...formData.courseContent];
                         updated[index].links[linkIndex].title = e.target.value;
-                        setContent(updated);
+                        setFormData({ ...formData, courseContent: updated });
                       }}
+                      placeholder="Resource Title"
+                      className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-transparent text-gray-800 dark:text-white"
                     />
                     <input
-                      type="url"
-                      placeholder="https://example.com"
-                      className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600"
                       value={link.url}
-                      onChange={e => {
-                        const updated = [...content];
+                      onChange={(e) => {
+                        const updated = [...formData.courseContent];
                         updated[index].links[linkIndex].url = e.target.value;
-                        setContent(updated);
+                        setFormData({ ...formData, courseContent: updated });
                       }}
+                      placeholder="https://example.com"
+                      type="url"
+                      className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-transparent text-gray-800 dark:text-white"
                     />
                     <button
                       onClick={() => {
-                        const updated = [...content];
+                        const updated = [...formData.courseContent];
                         updated[index].links.splice(linkIndex, 1);
-                        setContent(updated);
+                        setFormData({ ...formData, courseContent: updated });
                       }}
-                      className="text-red-500 hover:text-red-700"
+                      className="text-red-600 hover:text-red-700"
                     >
-                      <AiOutlineDelete />
+                      <FiTrash2 className="h-5 w-5" />
                     </button>
                   </div>
                 ))}
               </div>
             </motion.div>
-          ))}
-        </AnimatePresence>
+          )
+        ))}
+      </AnimatePresence>
 
-        <div className="flex justify-between mt-8">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 dark:hover:text-gray-400"
-          >
-            <FiArrowLeft /> Back
-          </button>
-          <button
-            onClick={() => validateSection(activeSection) && onNext()}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg"
-          >
-            Next <FiArrowRight />
-          </button>
-        </div>
+      <div className="flex justify-between">
+        <button
+          onClick={onBack}
+          className="px-6 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-800 dark:text-white rounded-lg"
+        >
+          Back
+        </button>
+        <button
+          onClick={() => validateSection() && onNext()}
+          className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+        >
+          Continue
+        </button>
       </div>
     </motion.div>
   );
