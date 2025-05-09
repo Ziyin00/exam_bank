@@ -35,20 +35,17 @@ interface User {
   id: string | number;
   name: string;
   email: string;
-  role: 'admin' | 'teacher' | 'student' | string;
-  status: 'active' | 'inactive' | string;
-  created_at?: string;
-  image?: string;
-  // department_id and department_name removed from general display,
-  // but student objects might still have department_id from backend
-  department_id?: string | number; // Kept for student data structure if backend sends it
-  department_name?: string; // Kept for student data structure if backend sends it
+  role: string;
+  status: string;
+  created_at: string;
+  department_id?: string;
+  department_name?: string;
 }
 
-// Department interface removed as we are not fetching/displaying departments separately
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3032";
-const IMAGE_PUBLIC_PATH = "/public/image/";
+interface Department {
+  id: string;
+  department_name: string;
+}
 
 const AllUsers: FC = () => {
   const { theme: nextThemeMode } = useNextTheme();
@@ -58,10 +55,10 @@ const AllUsers: FC = () => {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
-  const [formData, setFormData] = useState({ // Department removed from here
+  const [formData, setFormData] = useState({
     email: "",
-    name: "",
     role: "teacher",
+    department: "",
   });
   // const [departments, setDepartments] = useState<Department[]>([]); // Departments state removed
   const [page, setPage] = useState(0);
@@ -77,69 +74,48 @@ const AllUsers: FC = () => {
     return { 'role': role || 'admin', [`${role}-token`]: token || '' };
   }, []);
 
-  const fetchAllUsers = useCallback(async () => {
-    console.log('[DEBUG] fetchAllUsers: Starting fetch...');
-    setLoading(true);
-    let combinedUsersList: User[] = [];
+  const fetchAllUsers = async () => {
     try {
-      const headers = getAuthHeaders();
-      if (!headers[`${headers.role}-token`]) {
-        toast.error("Authentication missing. Cannot fetch user data.");
-        console.error('[DEBUG] fetchAllUsers: Authentication token missing, exiting fetch.');
-        setLoading(false);
-        setUsers([]);
-        return;
-      }
-      console.log('[DEBUG] fetchAllUsers: Proceeding to make API calls...');
+      // Fetch admins/teachers
+      const adminRes = await axios.get('http://localhost:3032/admin/get-account', {
+        headers: getAuthHeaders(),
+        withCredentials: true
+      });
 
-      // --- CHOOSE API URLS (Option A or B based on your Express router mounting) ---
-      // Option A: If your Express router is mounted at the root (e.g., app.use('/', adminRouter))
-      const staffApiUrl = `${API_BASE_URL}/get-account`;
-      const studentsApiUrl = `${API_BASE_URL}/get-student`;
-      // const departmentsApiUrl = `${API_BASE_URL}/get-departments`; // Departments call removed
+      // Fetch students
+      const studentsRes = await axios.get('http://localhost:3032/admin/get-student', {
+        withCredentials: true
+      });
 
-      // Option B: If your Express router is mounted under /admin (e.g., app.use('/admin', adminRouter))
-      // const staffApiUrl = `${API_BASE_URL}/admin/get-account`;
-      // const studentsApiUrl = `${API_BASE_URL}/admin/get-student`;
-      // const departmentsApiUrl = `${API_BASE_URL}/admin/get-departments`; // Departments call removed
-      // --- END OF URL CHOICE ---
+      // Fetch departments
+      const departmentsRes = await axios.get('http://localhost:3032/admin/get-departments', {
+        withCredentials: true
+      });
 
-      console.log(`[DEBUG] fetchAllUsers - Staff API URL: ${staffApiUrl}`);
-      console.log(`[DEBUG] fetchAllUsers - Students API URL: ${studentsApiUrl}`);
+      // Format admin/teacher data
+      const adminUser = adminRes.data.status && adminRes.data.data ? {
+        id: adminRes.data.data.id,
+        name: adminRes.data.data.name,
+        email: adminRes.data.data.email,
+        role: 'admin', // Or get from response if available
+        status: 'active', // Default value as it's not in the response
+        created_at: new Date().toISOString(), // Default as it's not in the response
+      } : [];
 
-      // Fetching staff and students, department call removed
-      const staffPromise = axios.get(staffApiUrl, { headers, withCredentials: true });
-      const studentsPromise = axios.get(studentsApiUrl, { headers, withCredentials: true });
+      // Format student data
+      const studentUsers = studentsRes.data?.results?.map((student) => ({
+        id: student.id,
+        name: student.name,
+        email: student.email,
+        role: 'student',
+        status: student.status || 'active', // Use status if available, otherwise default
+        created_at: student.created_at,
+        department_id: student.department_id,
+        department_name: student.department_name
+      })) || [];
 
-      const [staffRes, studentsRes] = await Promise.all([
-        staffPromise,
-        studentsPromise,
-        // departmentsPromise removed
-      ]);
-      console.log('[DEBUG] fetchAllUsers: Staff and Student API calls completed.');
-
-
-      if (staffRes.data?.status && staffRes.data?.data) {
-        const accountData = staffRes.data.data;
-        combinedUsersList.push({
-          id: accountData.id, name: accountData.name, email: accountData.email,
-          role: headers.role as User['role'], status: 'active', // Default status
-          created_at: accountData.created_at || new Date().toISOString(), image: accountData.image,
-          // No department info expected from /get-account for this user display
-        });
-      } else {
-        console.warn("[DEBUG] /get-account did not return expected data or failed:", staffRes.data);
-      }
-
-      const studentDataArray = Array.isArray(studentsRes.data) ? studentsRes.data : [];
-      const studentUsers: User[] = studentDataArray.map((student: any) => ({
-        id: student.id, name: student.name, email: student.email, role: 'student',
-        status: student.status || 'active', created_at: student.created_at,
-        department_id: student.department_id, // Still fetch if backend provides
-        department_name: student.department_name, // Still fetch if backend provides
-        image: student.image,
-      }));
-      combinedUsersList.push(...studentUsers);
+      // Combine users
+      setUsers([adminUser, ...studentUsers].filter(Boolean));
 
       // setDepartments removed
 
@@ -171,34 +147,26 @@ const AllUsers: FC = () => {
 
 
   const handleCreateUser = async () => {
-    if (!formData.email.trim() || !formData.name.trim()) {
-        toast.error("Name and Email are required."); return;
-    }
-    // Department check removed as department is removed from formData for new user creation UI
-    // If your backend *still* requires department_id for student creation,
-    // you'd need a way to select/provide it, or the backend logic needs adjustment.
-    // For now, assuming department_id is optional or handled differently by backend if not provided.
-
-    setIsSubmitting(true);
     try {
-      const endpoint = formData.role === 'student' ? `${API_BASE_URL}/admin/add-students` : `${API_BASE_URL}/add-account`;
-      const payload: any = { email: formData.email, name: formData.name, role: formData.role };
+      const endpoint = formData.role === 'student'
+        ? 'http://localhost:3032/admin/add-students'
+        : 'http://localhost:3032/admin/add-account';
 
-      // If you still need to send department_id for students specifically, and it's not in UI:
-      // if (formData.role === 'student') {
-      //   payload.department_id = SOME_DEFAULT_OR_LOGICALLY_DERIVED_DEPARTMENT_ID;
-      // }
+      await axios.post(endpoint, {
+        email: formData.email,
+        role: formData.role,
+        department_id: formData.department
+      }, {
+        headers: getAuthHeaders(),
+        withCredentials: true
+      });
 
-      await axios.post(endpoint, payload, { headers: getAuthHeaders(), withCredentials: true });
-      await fetchAllUsers();
+      await fetchAllUsers(); // Refresh all users
       setOpenModal(false);
-      setFormData({ email: "", name: "", role: "teacher" /* department removed */ });
-      toast.success("User created successfully!");
-    } catch (error) {
-      const axiosError = error as AxiosError;
-      toast.error((axiosError.response?.data as any)?.message || "Failed to create user.");
-    } finally {
-      setIsSubmitting(false);
+      setFormData({ email: "", role: "teacher", department: "" });
+      toast.success("User created successfully");
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to create user");
     }
   };
 
@@ -208,16 +176,18 @@ const AllUsers: FC = () => {
     if (!selectedUser) return;
     setIsSubmitting(true);
     try {
-      let endpoint = '';
-      if (selectedUser.role === 'student') {
-        endpoint = `${API_BASE_URL}/delete-student/${selectedUser.id}`;
-      } else if (selectedUser.role === 'teacher' || selectedUser.role === 'admin') {
-        endpoint = `${API_BASE_URL}/delete-teacher/${selectedUser.id}`;
-      } else { toast.error("Unknown user role for deletion."); setIsSubmitting(false); return; }
-      await axios.delete(endpoint, { headers: getAuthHeaders(), withCredentials: true });
-      setUsers(prev => prev.filter(u => u.id !== selectedUser.id));
-      setDeleteOpen(false); setSelectedUser(null);
-      toast.success("User deleted successfully!");
+      const endpoint = selectedUser.role === 'student'
+        ? `http://localhost:3032/admin/delete-student/${selectedUser.id}`
+        : `http://localhost:3032/admin/delete-teacher/${selectedUser.id}`;
+
+      await axios.delete(endpoint, {
+        headers: getAuthHeaders(),
+        withCredentials: true
+      });
+
+      await fetchAllUsers(); // Refresh all users
+      setDeleteOpen(false);
+      toast.success("User deleted successfully");
     } catch (error) {
       const axiosError = error as AxiosError;
       toast.error((axiosError.response?.data as any)?.message || "Failed to delete user.");
@@ -230,49 +200,105 @@ const AllUsers: FC = () => {
     const originalUsers = [...users];
     setUsers(prevUsers => prevUsers.map(u => u.id === userId ? { ...u, status: newStatus as User['status'] } : u));
     try {
-      let endpoint = '';
-      if (role === 'student') {
-        endpoint = `${API_BASE_URL}/edit-student/${userId}`;
-      } else if (role === 'teacher' || role === 'admin') {
-        endpoint = `${API_BASE_URL}/edit-teacher/${userId}`;
-      } else { toast.error("Unknown user role for status update."); setUsers(originalUsers); return; }
-      await axios.put(endpoint, { status: newStatus }, { headers: getAuthHeaders(), withCredentials: true });
-      toast.success("Status updated successfully!");
+      const endpoint = role === 'student'
+        ? `http://localhost:3032/admin/edit-student/${userId}`
+        : `http://localhost:3032/admin/edit-teacher/${userId}`;
+
+      await axios.put(endpoint,
+        { status: newStatus },
+        { headers: getAuthHeaders(), withCredentials: true }
+      );
+
+      setUsers(users.map(u => u.id === userId ? { ...u, status: newStatus } : u));
+      toast.success("Status updated successfully");
     } catch (error) {
-      const axiosError = error as AxiosError;
-      toast.error((axiosError.response?.data as any)?.message || "Failed to update status.");
-      setUsers(originalUsers);
+      toast.error("Failed to update status");
     }
   };
 
-
-  const filteredUsers = useMemo(() => {
-    if (!users) return []; if (!searchText) return users;
-    const lowerSearchText = searchText.toLowerCase();
-    return users.filter(user =>
-      user.name?.toLowerCase().includes(lowerSearchText) ||
-      user.email?.toLowerCase().includes(lowerSearchText) ||
-      user.role?.toLowerCase().includes(lowerSearchText)
-      // user.department_name search removed
-    );
-  }, [users, searchText]);
-
-  const handleChangePage = (event: unknown, newPage: number) => setPage(newPage);
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(parseInt(event.target.value, 10)); setPage(0);
-  };
-  const paginatedUsers = useMemo(() => {
-    if (!filteredUsers) return [];
-    return filteredUsers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
-  }, [filteredUsers, page, rowsPerPage]);
-
-  if (loading && users.length === 0) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 100px)', p:3 }}>
-        <CircularProgress size={50} /><Typography sx={{ml: 2, color: 'text.secondary'}}>Loading users...</Typography>
-      </Box>
-    );
-  }
+  const columns: GridColDef[] = [
+    { field: "id", headerName: "ID", flex: 0.3 },
+    {
+      field: "name",
+      headerName: "Name",
+      flex: 0.5,
+      renderCell: (params) => (
+        <div className="flex items-center gap-3">
+          <Avatar>{params.value?.[0] || 'U'}</Avatar>
+          <div>
+            <p className="font-medium">{params.value}</p>
+            <p className="text-xs text-gray-500">{params.row.email}</p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      field: "role",
+      headerName: "Role",
+      flex: 0.3,
+      renderCell: (params) => (
+        <Chip
+          label={params.value}
+          color={params.value === "admin" ? "primary" :
+            params.value === "teacher" ? "secondary" : "default"}
+          className="capitalize"
+        />
+      ),
+    },
+    {
+      field: "department_name",
+      headerName: "Department",
+      flex: 0.4,
+      valueGetter: (params) => params.row.department_name || "N/A",
+    },
+    {
+      field: "status",
+      headerName: "Status",
+      flex: 0.3,
+      renderCell: (params) => (
+        <Select
+          value={params.value || "active"}
+          onChange={(e) => handleStatusChange(params.row.id, e.target.value, params.row.role)}
+          size="small"
+          className="w-32"
+        >
+          <MenuItem value="active">Active</MenuItem>
+          <MenuItem value="inactive">Inactive</MenuItem>
+        </Select>
+      ),
+    },
+    {
+      field: "created_at",
+      headerName: "Joined",
+      flex: 0.4,
+      valueFormatter: (params) => params.value ? format(new Date(params.value)) : "N/A",
+    },
+    {
+      field: "actions",
+      headerName: "Actions",
+      flex: 0.4,
+      renderCell: (params) => (
+        <div className="flex gap-2">
+          <Button
+            onClick={() => {
+              setDeleteOpen(true);
+              setSelectedUser(params.row);
+            }}
+            color="error"
+          >
+            <AiOutlineDelete />
+          </Button>
+          <Button
+            href={`mailto:${params.row.email}`}
+            color="info"
+            className="dark:text-blue-400"
+          >
+            <AiOutlineMail />
+          </Button>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <Box m={{xs: "10px", md: "20px"}}>
@@ -377,26 +403,53 @@ const AllUsers: FC = () => {
       </Paper>
 
       {/* Create User Modal */}
-      <Modal open={openModal} onClose={() => setOpenModal(false)} aria-labelledby="add-user-modal-title">
-        <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', bgcolor: 'background.paper', boxShadow: 24, p: {xs: 2.5, sm: 3.5}, borderRadius: 2, width: { xs: '90%', sm: 450 }, outline: 'none' }}>
-          <Typography id="add-user-modal-title" variant="h6" component="h2" textAlign="center" mb={3} fontWeight="bold"> Add New User </Typography>
-          <TextField fullWidth label="Full Name" variant="outlined" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} sx={{ mb: 2 }} required autoFocus />
-          <TextField fullWidth label="Email Address" type="email" variant="outlined" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} sx={{ mb: 2 }} required />
-          <FormControl fullWidth sx={{ mb: 3 }}> {/* Increased mb for spacing */}
-            <InputLabel id="role-select-label">Role *</InputLabel>
-            <Select labelId="role-select-label" value={formData.role} label="Role *"
-              onChange={(e) => setFormData({ ...formData, role: e.target.value })} // Department is not part of form state now
-              required
+      <Modal open={openModal} onClose={() => setOpenModal(false)}>
+        <Box className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 p-6 rounded-xl w-[90%] max-w-md">
+          <Typography variant="h5" className="text-center mb-6 dark:text-white">
+            Add New User
+          </Typography>
+          <TextField
+            fullWidth
+            label="Email"
+            variant="outlined"
+            value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            className="mb-4 dark:text-white"
+          />
+          <FormControl fullWidth className="mb-4">
+            <InputLabel className="dark:text-white">Role</InputLabel>
+            <Select
+              value={formData.role}
+              label="Role"
+              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+              className="dark:text-white"
             >
+              <MenuItem value="admin">Admin</MenuItem>
               <MenuItem value="teacher">Teacher</MenuItem>
               <MenuItem value="student">Student</MenuItem>
             </Select>
           </FormControl>
-          {/* Department Select Removed from Modal */}
-          <Box display="flex" justifyContent="flex-end" gap={1.5}>
-            <Button onClick={() => setOpenModal(false)} color="inherit" sx={{textTransform: 'none'}}>Cancel</Button>
-            <Button variant="contained" onClick={handleCreateUser} disabled={isSubmitting} sx={{textTransform: 'none'}}>
-              {isSubmitting ? <CircularProgress size={24} color="inherit"/> : "Create User"}
+          <FormControl fullWidth className="mb-6">
+            <InputLabel className="dark:text-white">Department</InputLabel>
+            <Select
+              value={formData.department}
+              label="Department"
+              onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+              className="dark:text-white"
+            >
+              {departments.map((dept) => (
+                <MenuItem key={dept.id} value={dept.id}>
+                  {dept.department_name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <div className="flex justify-end gap-3">
+            <Button
+              onClick={() => setOpenModal(false)}
+              className="dark:text-white"
+            >
+              Cancel
             </Button>
           </Box>
         </Box>
