@@ -29,6 +29,7 @@ interface User {
   created_at: string;
   department_id?: string;
   department_name?: string;
+  image?: string;
 }
 
 interface Department {
@@ -44,9 +45,11 @@ const AllUsers: FC = () => {
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
   const [formData, setFormData] = useState({
+    name: "",
     email: "",
+    password: "",
     role: "teacher",
-    department: "",
+    department_id: "",
   });
   const [departments, setDepartments] = useState<Department[]>([]);
 
@@ -63,39 +66,43 @@ const AllUsers: FC = () => {
 
   const fetchAllUsers = async () => {
     try {
-      // Fetch admins/teachers
+      // Fetch admins
       const adminRes = await axios.get('http://localhost:3032/admin/get-account', {
         headers: getAuthHeaders(),
         withCredentials: true
       });
 
       // Fetch students
-      const studentsRes = await axios.get('http://localhost:3032/admin/get-student', {
+      const studentsRes = await axios.get('http://localhost:3032/admin/get-students', {
+        headers: getAuthHeaders(),
         withCredentials: true
       });
 
       // Fetch departments
-      const departmentsRes = await axios.get('http://localhost:3032/admin/get-departments', {
+      const departmentsRes = await axios.get('http://localhost:3032/admin/get-department', {
+        headers: getAuthHeaders(),
         withCredentials: true
       });
 
-      // Format admin/teacher data
+      // Format admin data
       const adminUser = adminRes.data.status && adminRes.data.data ? {
         id: adminRes.data.data.id,
         name: adminRes.data.data.name,
         email: adminRes.data.data.email,
-        role: 'admin', // Or get from response if available
-        status: 'active', // Default value as it's not in the response
-        created_at: new Date().toISOString(), // Default as it's not in the response
+        image: adminRes.data.data.image,
+        role: 'admin',
+        status: 'active',
+        created_at: new Date().toISOString(),
       } : [];
 
       // Format student data
-      const studentUsers = studentsRes.data?.results?.map((student) => ({
+      const studentUsers = studentsRes.data?.map((student) => ({
         id: student.id,
         name: student.name,
         email: student.email,
+        image: student.image,
         role: 'student',
-        status: student.status || 'active', // Use status if available, otherwise default
+        status: 'active', // Default as status isn't in the response
         created_at: student.created_at,
         department_id: student.department_id,
         department_name: student.department_name
@@ -120,22 +127,32 @@ const AllUsers: FC = () => {
 
   const handleCreateUser = async () => {
     try {
-      const endpoint = formData.role === 'student'
-        ? 'http://localhost:3032/admin/add-students'
-        : 'http://localhost:3032/admin/add-account';
+      // Match endpoint based on the backend code
+      const endpoint = formData.role === 'admin'
+        ? 'http://localhost:3032/admin/add-account'
+        : 'http://localhost:3032/admin/add-student';
 
-      await axios.post(endpoint, {
-        email: formData.email,
-        role: formData.role,
-        department_id: formData.department
-      }, {
-        headers: getAuthHeaders(),
+      // Create form data for file upload if needed
+      const data = new FormData();
+      data.append('name', formData.name);
+      data.append('email', formData.email);
+      data.append('password', formData.password);
+
+      if (formData.role === 'student' && formData.department_id) {
+        data.append('department_id', formData.department_id);
+      }
+
+      await axios.post(endpoint, data, {
+        headers: {
+          ...getAuthHeaders(),
+          'Content-Type': 'multipart/form-data',
+        },
         withCredentials: true
       });
 
       await fetchAllUsers(); // Refresh all users
       setOpenModal(false);
-      setFormData({ email: "", role: "teacher", department: "" });
+      setFormData({ name: "", email: "", password: "", role: "teacher", department_id: "" });
       toast.success("User created successfully");
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to create user");
@@ -146,9 +163,10 @@ const AllUsers: FC = () => {
     if (!selectedUser) return;
 
     try {
+      // Match endpoint based on the backend code
       const endpoint = selectedUser.role === 'student'
         ? `http://localhost:3032/admin/delete-student/${selectedUser.id}`
-        : `http://localhost:3032/admin/delete-teacher/${selectedUser.id}`;
+        : `http://localhost:3032/admin/delete-account/${selectedUser.id}`;
 
       await axios.delete(endpoint, {
         headers: getAuthHeaders(),
@@ -167,7 +185,7 @@ const AllUsers: FC = () => {
     try {
       const endpoint = role === 'student'
         ? `http://localhost:3032/admin/edit-student/${userId}`
-        : `http://localhost:3032/admin/edit-teacher/${userId}`;
+        : `http://localhost:3032/admin/edit-account/${userId}`;
 
       await axios.put(endpoint,
         { status: newStatus },
@@ -189,7 +207,11 @@ const AllUsers: FC = () => {
       flex: 0.5,
       renderCell: (params) => (
         <div className="flex items-center gap-3">
-          <Avatar>{params.value?.[0] || 'U'}</Avatar>
+          {params.row.image ? (
+            <Avatar src={`http://localhost:3032/image/${params.row.image}`} />
+          ) : (
+            <Avatar>{params.value?.[0] || 'U'}</Avatar>
+          )}
           <div>
             <p className="font-medium">{params.value}</p>
             <p className="text-xs text-gray-500">{params.row.email}</p>
@@ -309,10 +331,27 @@ const AllUsers: FC = () => {
           </Typography>
           <TextField
             fullWidth
+            label="Name"
+            variant="outlined"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            className="mb-4 dark:text-white"
+          />
+          <TextField
+            fullWidth
             label="Email"
             variant="outlined"
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            className="mb-4 dark:text-white"
+          />
+          <TextField
+            fullWidth
+            type="password"
+            label="Password"
+            variant="outlined"
+            value={formData.password}
+            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             className="mb-4 dark:text-white"
           />
           <FormControl fullWidth className="mb-4">
@@ -328,21 +367,23 @@ const AllUsers: FC = () => {
               <MenuItem value="student">Student</MenuItem>
             </Select>
           </FormControl>
-          <FormControl fullWidth className="mb-6">
-            <InputLabel className="dark:text-white">Department</InputLabel>
-            <Select
-              value={formData.department}
-              label="Department"
-              onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-              className="dark:text-white"
-            >
-              {departments.map((dept) => (
-                <MenuItem key={dept.id} value={dept.id}>
-                  {dept.department_name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          {formData.role === 'student' && (
+            <FormControl fullWidth className="mb-6">
+              <InputLabel className="dark:text-white">Department</InputLabel>
+              <Select
+                value={formData.department_id}
+                label="Department"
+                onChange={(e) => setFormData({ ...formData, department_id: e.target.value })}
+                className="dark:text-white"
+              >
+                {departments.map((dept) => (
+                  <MenuItem key={dept.id} value={dept.id}>
+                    {dept.department_name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
           <div className="flex justify-end gap-3">
             <Button
               onClick={() => setOpenModal(false)}
