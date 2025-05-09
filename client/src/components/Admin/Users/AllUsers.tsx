@@ -89,7 +89,8 @@ const AllUsers: FC = () => {
       });
 
       // Fetch departments
-      const departmentsRes = await axios.get('http://localhost:3032/admin/get-departments', {
+      const departmentsRes = await axios.get('http://localhost:3032/admin/get-department', {
+        headers: getAuthHeaders(),
         withCredentials: true
       });
 
