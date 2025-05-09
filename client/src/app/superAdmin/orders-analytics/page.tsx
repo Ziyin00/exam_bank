@@ -1,7 +1,7 @@
 "use client"
 import OrdersAnalytics from '@/src/components/Admin/Analytics/OrdersAnalytics'
 import DashboardHeader from '@/src/components/Admin/DashboardHeader'
-import AdminSidebar from '@/src/components/Admin/sidebar/AdminSideBar'
+import AdminSideBar from '@/src/components/superAdmin/sidebar/AdminSideBar'
 import React, { FC } from 'react'
 
 
@@ -18,7 +18,7 @@ const page: FC<Props> = (props) => {
               
           <div className="flex h-[200vh] ">
           <div className='1500px:w-[16%] w-1/5 '>
-                  <AdminSidebar />
+                  <AdminSideBar />
               </div>
               <div className='w-[85%] '>
                   <DashboardHeader />

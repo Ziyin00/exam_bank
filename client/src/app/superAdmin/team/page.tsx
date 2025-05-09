@@ -2,6 +2,7 @@
 import DashboardHero from '@/src/components/Admin/DashboardHero'
 import AdminSidebar from '@/src/components/Admin/sidebar/AdminSideBar'
 import AllUsers from '@/src/components/Admin/Users/AllUsers'
+import AdminSideBar from '@/src/components/superAdmin/sidebar/AdminSideBar'
 import React from 'react'
 
 
@@ -15,7 +16,7 @@ const page = (props: Props) => {
    
     <div className="flex h-screen ">
         <div className='1500px:w-[16%] w-1/5 '>
-            <AdminSidebar />
+            <AdminSideBar />
             
         </div>
         <div className='w-[85%] '>

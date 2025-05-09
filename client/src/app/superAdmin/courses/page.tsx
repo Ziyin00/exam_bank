@@ -1,7 +1,7 @@
 
 import AllCourses from '@/src/components/Admin/Course/AllCourses'
 import DashboardHero from '@/src/components/Admin/DashboardHero'
-import AdminSideBar from '@/src/components/Admin/sidebar/AdminSideBar'
+import AdminSideBar from '@/src/components/superAdmin/sidebar/AdminSideBar'
 import React from 'react'
 
 

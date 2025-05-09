@@ -163,9 +163,9 @@ const AllCourses = () => {
             sx={{ width: { xs: '100%', sm: 300 } }}
             InputProps={{ startAdornment: (<InputAdornment position="start"><AiOutlineSearch /></InputAdornment>)}}
         />
-        <Link href="/admin/create-course" passHref>
+        {/* <Link href="/admin/create-course" passHref>
             <Button variant="contained" startIcon={<AiOutlinePlus />} sx={{ width: { xs: '100%', sm: 'auto' } }}>New Course</Button>
-        </Link>
+        </Link> */}
       </Box>
 
       <Paper sx={{ width: '100%', overflow: 'hidden', borderRadius: 2, boxShadow: `0 4px 12px ${theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.1)'}` }}>

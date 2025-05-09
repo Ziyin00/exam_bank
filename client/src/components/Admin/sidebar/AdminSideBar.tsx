@@ -192,7 +192,7 @@ const AdminSideBar = () => {
             <Box pl={isCollapsed && !isMobile ? 0 : 2}>
               <Item title="Dashboard" to="/admin" icon={<HomeOutlined />} selected={selected} setSelected={setSelected} />
               
-              <Box my={2}>
+              {/* <Box my={2}>
                 <Typography variant="overline" color="text.secondary">
                   {(!isCollapsed || isMobile) && "Management"}
                 </Typography>
@@ -200,7 +200,7 @@ const AdminSideBar = () => {
 
               <Item title="Users" to="/admin/users" icon={<Groups />} selected={selected} setSelected={setSelected} />
               <Item title="Courses" to="/admin/courses" icon={<OndemandVideo />} selected={selected} setSelected={setSelected} />
-              <Item title="Analytics" to="/admin/analytics" icon={<BarChartOutlined />} selected={selected} setSelected={setSelected} />
+              <Item title="Analytics" to="/admin/analytics" icon={<BarChartOutlined />} selected={selected} setSelected={setSelected} /> */}
               
               <Box my={2}>
                 <Typography variant="overline" color="text.secondary">
@@ -214,7 +214,7 @@ const AdminSideBar = () => {
               <Item title="FAQ" to="/admin/faq" icon={<Quiz />} selected={selected} setSelected={setSelected} />
               
               <Box mt={4}>
-                <Item title="Settings" to="/admin/settings" icon={<Settings />} selected={selected} setSelected={setSelected} />
+                {/* <Item title="Settings" to="/admin/settings" icon={<Settings />} selected={selected} setSelected={setSelected} /> */}
                 <MenuItem onClick={logoutHandler} icon={<ExitToApp />} style={{ color: muiTheme.palette.error.main }}>
                   <Typography variant="body1" className="font-Poppins">
                     Logout
