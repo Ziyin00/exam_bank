@@ -73,7 +73,7 @@ const AllUsers: FC = () => {
       });
 
       // Fetch students
-      const studentsRes = await axios.get('http://localhost:3032/admin/get-students', {
+      const studentsRes = await axios.get('http://localhost:3032/admin/get-student', {
         headers: getAuthHeaders(),
         withCredentials: true
       });
