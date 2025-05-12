@@ -7,9 +7,11 @@ import React, {
 } from 'react';
 
 import { useTheme as useNextTheme } from 'next-themes';
+import Link from 'next/link';
 import toast from 'react-hot-toast';
 import {
   AiOutlineDelete,
+  AiOutlinePlus,
   AiOutlineSearch,
 } from 'react-icons/ai';
 
@@ -45,8 +47,8 @@ interface Course {
   id: string | number;         // <<< THIS MUST MATCH THE PRIMARY KEY NAME (e.g., 'id') FROM YOUR 'courses' TABLE
   title: string;
   image?: string;              // Field name for course image from backend (e.g., 'image', 'thumbnail')
-  category_name?: string;    // Field name for category name from backend
-  status?: 'Published' | 'Draft' | 'Pending' | string;
+  category_name?: string;    // Field name for category name from backend (if /admin/get-all-course provides it)
+  status?: 'Published' | 'Draft' | 'Pending' | string; // Or whatever statuses your backend uses
   course_tag?: string;
   year?: string;
 }
@@ -54,15 +56,15 @@ interface Course {
 
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:3032';
-// CRITICAL: Adjust if your backend serves images from a different public path
-const IMAGE_PUBLIC_PATH = "/public/image/";
+// CRITICAL: Adjust if your backend serves images from a different public path relative to API_BASE_URL
+const IMAGE_PUBLIC_PATH = "/public/image/"; // Example: API_BASE_URL + /public/image/filename.jpg
 
 const AllCourses = () => {
   const muiTheme = useMuiTheme();
   const { theme: nextThemeMode } = useNextTheme();
 
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
-  const [courseIdToDelete, setCourseIdToDelete] = useState<GridRowId | null>(null); // Will store course.id
+  const [courseIdToDelete, setCourseIdToDelete] = useState<GridRowId | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
   const [searchText, setSearchText] = useState('');
   const [loading, setLoading] = useState(true);
@@ -70,7 +72,7 @@ const AllCourses = () => {
 
   const fetchCourses = useCallback(async () => {
     setLoading(true);
-    // All routes from supperAdminRouter are prefixed with /admin
+    // Your supperAdminRouter has /get-all-course and is mounted on /admin
     const fetchUrl = `${API_BASE_URL}/admin/get-all-course`;
     console.log('[DEBUG] AllCourses - Fetching courses from:', fetchUrl);
     try {
@@ -83,10 +85,11 @@ const AllCourses = () => {
       const data = await response.json();
       console.log('[DEBUG] AllCourses - Raw data from API:', data);
 
+      // --- CRITICAL: Adjust data extraction based on your API's response structure for /admin/get-all-course ---
       const coursesArray: Course[] = Array.isArray(data) ? data : (data.courses || data.data || []);
-      console.log('[DEBUG] AllCourses - Extracted courses array:', coursesArray);
+      console.log('[DEBUG] AllCourses - Extracted courses array (length):', coursesArray.length);
       if (coursesArray.length > 0) {
-        console.log('[DEBUG] AllCourses - Sample of first course object (VERIFY `id` field!):', coursesArray[0]);
+        console.log('[DEBUG] AllCourses - Sample of first course object (VERIFY `id` field for key and `getRowId`!):', coursesArray[0]);
       }
       setCourses(coursesArray);
     } catch (error: any) {
@@ -96,7 +99,7 @@ const AllCourses = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, []); // API_BASE_URL is constant
 
   useEffect(() => {
     fetchCourses();
@@ -110,25 +113,27 @@ const AllCourses = () => {
     setIsDeleting(true);
     const toastId = toast.loading('Deleting course...');
 
-    // --- CORRECTED DELETE URL ---
-    const deleteUrl = `${API_BASE_URL}/admin/delete-course/${courseIdToDelete}`;
+    // --- CORRECTED DELETE URL TO USE /teacher PREFIX ---
+    const deleteUrl = `${API_BASE_URL}/teacher/delete-course/${courseIdToDelete}`;
     console.log('[DEBUG] AllCourses - Deleting course from:', deleteUrl);
 
     try {
-      const response = await fetch(deleteUrl, { method: 'DELETE' });
+      // You might want to add auth headers here if your delete endpoint requires them
+      // const headers = getAuthHeaders(); // Assuming you have a getAuthHeaders function
+      // const response = await fetch(deleteUrl, { method: 'DELETE', headers });
+      const response = await fetch(deleteUrl, { method: 'DELETE' }); // Using fetch without explicit headers for now
+
       if (!response.ok) {
         let errorMsg = `Failed to delete course (Status: ${response.status}): ${response.statusText}`;
         try { const errData = await response.json(); errorMsg = errData.message || errorMsg; } catch (_) {}
         throw new Error(errorMsg);
       }
-      // Backend response for successful delete is { status: true, message: 'Course deleted successfully' }
-      const result = await response.json(); // Assuming backend sends JSON on success too
+      const result = await response.json();
       if (result.status === true) {
-        // Remove the course from the local state using the `id` field
+        // Ensure course.id matches the ID field used in getRowId
         setCourses(prevCourses => prevCourses.filter(course => course.id !== courseIdToDelete));
         toast.success('Course deleted successfully', { id: toastId });
       } else {
-        // If backend status is false even with HTTP 200 (unlikely for delete but good to handle)
         throw new Error(result.message || "Deletion reported as failed by server.");
       }
       setOpenDeleteModal(false);
@@ -142,12 +147,13 @@ const AllCourses = () => {
   };
 
   // --- CRITICAL: `getRowId` must return the unique ID field from your Course objects ---
-  // This now assumes your unique ID field from the backend (and in the Course interface) is 'id'.
+  // This assumes your unique ID field from the backend (and in the Course interface) is 'id'.
+  // If your /admin/get-all-course returns objects where the ID is e.g., '_id' or 'course_id', change 'row.id' here.
   const getRowId = (row: Course): GridRowId => row.id;
 
   const columns: GridColDef<Course>[] = [
     {
-      field: 'image', // Ensure this matches the field name in your Course objects
+      field: 'image', // Field name from your Course interface (should match backend response)
       headerName: '',
       flex: 0.3,
       minWidth: 80,
@@ -162,7 +168,7 @@ const AllCourses = () => {
       ),
     },
     {
-      field: 'title',
+      field: 'title', // Field name from your Course interface
       headerName: 'Course Title',
       flex: 2,
       minWidth: 250,
@@ -171,7 +177,7 @@ const AllCourses = () => {
           <Typography variant="subtitle1" fontWeight="600" noWrap title={params.value as string}>
             {params.value || "N/A"}
           </Typography>
-          {params.row.category_name && ( // Ensure this matches field name
+          {params.row.category_name && ( // Field name from your Course interface
             <Chip
               label={params.row.category_name}
               size="small"
@@ -185,19 +191,19 @@ const AllCourses = () => {
       ),
     },
     {
-      field: 'course_tag', // Ensure this matches field name
+      field: 'course_tag', // Field name from your Course interface
       headerName: 'Tag & Year',
       flex: 0.7,
       minWidth: 130,
       renderCell: (params) => (
           <Box sx={{py:1}}>
               <Typography variant="body2" noWrap>{params.value || "N/A"}</Typography>
-              <Typography variant="caption" color="text.secondary" noWrap>{params.row.year || "N/A"}</Typography> {/* Ensure 'year' field exists */}
+              <Typography variant="caption" color="text.secondary" noWrap>{params.row.year || "N/A"}</Typography>
           </Box>
       )
     },
     {
-      field: 'status', // Ensure this matches field name
+      field: 'status', // Field name from your Course interface
       headerName: 'Status',
       flex: 0.5,
       minWidth: 120,
@@ -220,12 +226,12 @@ const AllCourses = () => {
       minWidth: 100,
       align: 'center', headerAlign: 'center',
       getActions: (params) => [
-        // params.id here will be the value returned by getRowId (i.e., course.id)
+        // params.id here will be the value returned by getRowId (i.e., course.id IF getRowId returns course.id)
         <Tooltip title="Delete Course" key={`delete-${params.id}`}>
           <IconButton color="error" size="small"
             onClick={() => {
               setOpenDeleteModal(true);
-              setCourseIdToDelete(params.id); // This will be course.id
+              setCourseIdToDelete(params.id);
             }}
             disabled={isDeleting}
           >
@@ -247,15 +253,6 @@ const AllCourses = () => {
     );
   }, [courses, searchText]);
 
-  const handleChangePage = (event: unknown, newPage: number) => setPage(newPage);
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
-  // paginatedCourses is not directly used by DataGrid, DataGrid handles its own pagination from 'rows'
-  // const paginatedCourses = useMemo(() => { ... });
-
-
   return (
     <Box sx={{ p: { xs: 2, sm: 3 }, maxWidth: '100vw', overflowX: 'hidden' }}>
       <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
@@ -267,30 +264,47 @@ const AllCourses = () => {
             {loading && courses.length === 0 ? 'Loading courses...' : `${filteredCourses.length} of ${courses.length} courses shown`}
           </Typography>
         </Box>
-        {/* <Box display="flex" alignItems="center" gap={2} flexWrap="wrap" sx={{width: {xs: '100%', md: 'auto'}}}>
-            <Link href="/admin/add-course" passHref>
-                <Button
-                    variant="contained"
-                    color="primary"
-                    startIcon={<AiOutlinePlus />}
-                    sx={{mt: {xs: 1, sm:0}, width: { xs: '100%', sm: 'auto' }, textTransform: 'none' }}
-                >
-                    New Course
-                </Button>
-            </Link>
-        </Box> */}
+        <Link href="/admin/add-course" passHref>
+            <Button
+                variant="contained"
+                color="primary"
+                startIcon={<AiOutlinePlus />}
+                sx={{mt: {xs: 1, sm:0}, width: { xs: '100%', sm: 'auto' }, textTransform: 'none' }}
+            >
+                New Course
+            </Button>
+        </Link>
       </Box>
 
       <Box sx={{
         height: 650, width: '100%',
-        '& .MuiDataGrid-root': { /* ...styling... */ },
-        // ... other DataGrid specific styling from your previous code
+        '& .MuiDataGrid-root': {
+          border: `1px solid ${nextThemeMode === 'dark' ? muiTheme.palette.divider : muiTheme.palette.grey[300]}`,
+          borderRadius: '8px',
+        },
+        '& .MuiDataGrid-cell': {
+            borderBottom: `1px solid ${nextThemeMode === 'dark' ? muiTheme.palette.divider : muiTheme.palette.grey[200]}`,
+            alignItems: 'center', display: 'flex',
+        },
+        '& .MuiDataGrid-columnHeaders': {
+            backgroundColor: nextThemeMode === 'dark' ? muiTheme.palette.grey[900] : muiTheme.palette.grey[100],
+            borderBottom: `1px solid ${nextThemeMode === 'dark' ? muiTheme.palette.divider : muiTheme.palette.grey[300]}`,
+            color: "text.primary",
+            fontWeight: 'bold'
+        },
+        '& .MuiDataGrid-toolbarContainer': {
+            padding: muiTheme.spacing(1, 2),
+            borderBottom: `1px solid ${nextThemeMode === 'dark' ? muiTheme.palette.divider : muiTheme.palette.grey[300]}`,
+        },
+        '& .MuiDataGrid-footerContainer': {
+            borderTop: `1px solid ${nextThemeMode === 'dark' ? muiTheme.palette.divider : muiTheme.palette.grey[300]}`,
+        }
       }}>
         <DataGrid
           rows={filteredCourses}
           columns={columns}
           loading={loading}
-          getRowId={getRowId} // Uses the updated getRowId
+          getRowId={getRowId}
           components={{
             Toolbar: () => (
               <GridToolbarContainer>
@@ -310,7 +324,7 @@ const AllCourses = () => {
             NoRowsOverlay: () => (
               <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', color: 'text.secondary', p:2 }}>
                 <Typography variant="subtitle1" fontWeight="medium">No courses to display.</Typography>
-                {searchText && courses.length > 0 && <Typography variant="body2" sx={{mt:1}}>Try a different search term or clear filters.</Typography>}
+                {searchText && courses.length > 0 && <Typography variant="body2" sx={{mt:1}}>Try a different search term.</Typography>}
                 {!searchText && courses.length === 0 && !loading && <Typography variant="body2" sx={{mt:1}}>Click "New Course" to add your first one!</Typography>}
               </Box>
             )

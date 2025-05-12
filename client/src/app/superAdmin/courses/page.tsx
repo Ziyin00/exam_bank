@@ -1,9 +1,8 @@
+import React from 'react';
 
-import AllCourses from '@/src/components/Admin/Course/AllCourses'
-import DashboardHero from '@/src/components/Admin/DashboardHero'
-import AdminSideBar from '@/src/components/superAdmin/sidebar/AdminSideBar'
-import React from 'react'
-
+import DashboardHero from '@/src/components/Admin/DashboardHero';
+import AdminSideBar from '@/src/components/superAdmin/sidebar/AdminSideBar';
+import AllCourses from '@/src/components/superAdmin/Course/AllCourses';
 
 type Props = {}
 

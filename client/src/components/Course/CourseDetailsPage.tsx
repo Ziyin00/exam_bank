@@ -1,28 +1,53 @@
-// FILE: app/ClientCourse/[id]/page.tsx
-
 "use client";
 
-import React, { useEffect, useState, useCallback, ReactNode } from "react";
-import { useParams, useRouter } from "next/navigation"; // useRouter can be helpful for navigation
-import Link from "next/link"; // For "Go to Courses" button
-import Image from "next/image";
-import { motion } from "framer-motion";
-import { toast } from "react-hot-toast";
+import React, {
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
 
-import Ratings from "@/utils/Ratings"; // Ensure this path is correct
-import { FiDownloadCloud, FiAlertCircle, FiCheckCircle, FiShare2 } from "react-icons/fi";
-import { BsBookmark, BsBookmarkFill, BsChatDots } from "react-icons/bs";
-import { VscCommentDiscussion, VscBook } from "react-icons/vsc";
-import { AiOutlineQuestionCircle, AiOutlineStar } from "react-icons/ai";
-import { slideInFromBottom, fadeIn, staggerContainer } from "@/utils/motion"; // Ensure this path is correct
+import { motion } from 'framer-motion';
+import Image from 'next/image';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { toast } from 'react-hot-toast';
+import { AiOutlineStar } from 'react-icons/ai';
+import { BsChatDots } from 'react-icons/bs';
+import {
+  FiAlertCircle,
+  FiCheckCircle,
+  FiDownloadCloud,
+  FiShare2,
+} from 'react-icons/fi';
+import {
+  VscBook,
+  VscCommentDiscussion,
+} from 'react-icons/vsc';
+import { format } from 'timeago.js';
 
-// --- Interface Definitions ---
+import Ratings from '@/utils/Ratings';
+import {
+  Avatar,
+  CircularProgress,
+} from '@mui/material';
+
+interface CourseListItemFromApi {
+  id: string | number;
+  title: string;
+  description?: string;
+  image?: string | null;
+  department_name?: string;
+  year?: number | string;
+  course_tag?: string;
+  total_students?: number | string;
+}
+
 interface CourseDetail {
   id: string;
   title: string;
   description: string;
   department: string;
-  year: number;
+  year: number | string;
   worksheets: WorksheetData[];
   benefits: string[];
   prerequisites: string[];
@@ -32,15 +57,20 @@ interface CourseDetail {
   averageRating: number;
   totalStudents: number;
   image?: string | null;
-  instructor?: { name: string; id?: string | number };
+  instructor?: {
+    name: string;
+    id?: string | number;
+    instructor_id?: string | number;
+  };
+  course_tag?: string;
 }
 
 interface WorksheetData {
   id: string;
   title: string;
-  pages: number;
+  pages?: number;
   fileUrl: string;
-  section: string;
+  section?: string;
   description?: string;
 }
 
@@ -48,16 +78,21 @@ interface ReviewData {
   id: string;
   comment: string;
   rating: number;
-  createdAt: string; // Expect ISO string or valid date string
-  student: { name: string; id?: string | number };
+  createdAt: string;
+  student: {
+    name: string;
+    id?: string | number;
+    student_id?: string | number;
+    avatar?: string;
+  };
 }
 
 interface QuestionData {
   id: string;
   text: string;
   answer?: string;
-  createdAt: string; // Expect ISO string or valid date string
-  student: { name: string; id?: string | number };
+  createdAt: string;
+  student: { name: string; id?: string | number; student_id?: string | number };
 }
 
 interface CourseContentItem {
@@ -66,673 +101,738 @@ interface CourseContentItem {
   description: string;
 }
 
-// --- API & Asset Configuration ---
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3032";
-const DEFAULT_COURSE_IMAGE = "/assets/image_1746528349753.jpg"; // Ensure 'public/assets/image_1746528349753.jpg' exists
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3032";
+const DEFAULT_COURSE_IMAGE = "/assets/worksheet1.jpg";
+const UPLOADS_BASE_PATH = "/image/";
+
+const ImageViewerModal = ({ imageUrl, onClose, title }: { imageUrl: string; onClose: () => void; title: string }) => {
+  const [zoom, setZoom] = useState(1);
+
+  const handleZoomIn = () => setZoom(prev => Math.min(prev * 1.2, 5));
+  const handleZoomOut = () => setZoom(prev => Math.max(prev / 1.2, 0.5));
+  const handleResetZoom = () => setZoom(1);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[1000] p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-lg shadow-xl relative max-w-5xl max-h-[90vh] w-full flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex justify-between items-center p-3 border-b sticky top-0 bg-white z-10">
+          <h3 className="text-lg font-semibold truncate pr-2" title={title}>{title}</h3>
+          <div className="flex items-center gap-x-1 sm:gap-x-2 flex-shrink-0">
+            <button onClick={handleZoomIn} className="px-2 py-1.5 hover:bg-gray-200 rounded text-sm" title="Zoom In">Zoom In</button>
+            <button onClick={handleZoomOut} className="px-2 py-1.5 hover:bg-gray-200 rounded text-sm" title="Zoom Out">Zoom Out</button>
+            <button onClick={handleResetZoom} className="px-2 py-1.5 hover:bg-gray-200 rounded text-sm" title="Reset Zoom">Reset</button>
+            <button onClick={onClose} className="px-2 py-1.5 hover:bg-red-100 text-red-600 rounded text-sm" title="Close (Esc)">Close</button>
+          </div>
+        </div>
+        <div
+          className="flex-grow overflow-auto p-1 sm:p-2"
+        >
+          <div
+            className="flex items-center justify-center min-h-full"
+          >
+            <img
+              src={imageUrl}
+              alt={title}
+              style={{
+                transform: `scale(${zoom})`,
+                transformOrigin: 'center',
+                transition: 'transform 0.15s ease-out',
+                maxWidth: '100%',
+                maxHeight: 'calc(90vh - 70px)',
+                display: 'block',
+              }}
+              draggable="false"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 const CourseDetailsPage = () => {
   const params = useParams();
-  // const router = useRouter(); // If needed for programmatic navigation
-  console.log("CourseDetailsPage: PARAMS RECEIVED:", params);
-  const courseId = params?.id as string | undefined;
-  console.log("CourseDetailsPage: courseId VARIABLE:", courseId);
+  const courseIdFromParams = params?.id as string | undefined;
 
   const [course, setCourse] = useState<CourseDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState("overview");
   const [newQuestionText, setNewQuestionText] = useState("");
   const [reviewCommentText, setReviewCommentText] = useState("");
   const [reviewRating, setReviewRating] = useState(0);
-  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
 
-  const getAuthToken = useCallback((): string | null => {
-    return typeof window !== "undefined" ? localStorage.getItem('token') : null;
+  const getAuthInfo = useCallback(() => {
+    if (typeof window === "undefined")
+      return { token: null, role: null, userId: null };
+    // This logic assumes 'student-token' is a specific key, 
+    // or 'token' is a generic one.
+    // For the backend provided, it will use the `role` to form `${role}-token` header name.
+    const token =
+      localStorage.getItem("token") || localStorage.getItem("student-token");
+    const role = localStorage.getItem("role");
+    const userId = localStorage.getItem("user-id");
+    return { token, role, userId };
   }, []);
 
-  const getRole = useCallback((): string | null => {
-    return typeof window !== "undefined" ? localStorage.getItem('role') : null;
-  }, []);
-
-  const fetchCourseData = useCallback(async (isRetry = false) => {
-    if (!courseId) {
-      console.error("CourseDetailsPage: fetchCourseData - courseId is missing. Aborting fetch.");
-      setError("Course ID is missing from URL. Cannot fetch data.");
-      setLoading(false);
-      return;
-    }
-    console.log(`CourseDetailsPage: fetchCourseData - START - courseId: ${courseId}, isRetry: ${isRetry}`);
-
-    if (!isRetry) setLoading(true);
-    setError(null);
-    
-    const token = getAuthToken();
-    const baseHeaders: HeadersInit = { 'Content-Type': 'application/json' };
-    if (token) {
-      baseHeaders['Authorization'] = `Bearer ${token}`;
-    }
-
-    try {
-      const role = getRole() || 'student';
-      const qaHeaders: HeadersInit = { ...baseHeaders };
-      if (role && token) {
-        qaHeaders['role'] = role;
-        qaHeaders[`${role}-token`] = token;
+  const fetchCourseData = useCallback(
+    async (idToFetch: string, isRetry = false) => {
+      if (!isRetry) {
+        setLoading(true);
+        setError(null);
+        setCourse(null);
       }
 
-      const [courseRes, questionsRes, ratingRes, bookmarkStatusRes] = await Promise.allSettled([
-        fetch(`${API_BASE_URL}/student/get-cours/${courseId}`, { headers: baseHeaders }),
-        fetch(`${API_BASE_URL}/student/get-quation-answer/${courseId}`, { headers: qaHeaders }),
-        fetch(`${API_BASE_URL}/student/rating/${courseId}`, { headers: baseHeaders }),
-        token ? fetch(`${API_BASE_URL}/student/bookmark-status/${courseId}`, { headers: baseHeaders }) : Promise.resolve(null)
-      ]);
-
-      console.log("CourseDetailsPage: fetchCourseData - API Responses Settled:", { courseRes, questionsRes, ratingRes, bookmarkStatusRes });
-
-      // --- Process Main Course Data (includes worksheets and reviews by assumption) ---
-      if (courseRes.status === 'rejected' || (courseRes.status === 'fulfilled' && !courseRes.value.ok)) {
-        const errorDetail = courseRes.status === 'fulfilled' 
-          ? `(Status: ${courseRes.value.status}) ${await courseRes.value.json().then(j => j.message).catch(() => courseRes.value.statusText)}` 
-          : courseRes.reason?.message;
-        throw new Error(`Failed to fetch main course data. ${errorDetail || 'Unknown error from course endpoint'}`);
+      const { token, role: userRole } = getAuthInfo(); 
+      const baseHeaders: HeadersInit = { "Content-Type": "application/json" };
+      // For GET requests, if they also need this new auth scheme, they'd need similar header adjustments.
+      // For now, assuming GET requests might use a different auth or are public.
+      // The original code used 'Authorization: Bearer ${token}' for GETs.
+      // If GETs ALSO need the new header format:
+      if (token && userRole) {
+        baseHeaders["role"] = userRole;
+        baseHeaders[`${userRole}-token`] = token;
+      } else if (token) { // Fallback to Bearer if role-specific is not fully set up but token exists
+        baseHeaders["Authorization"] = `Bearer ${token}`;
       }
-      const courseApiResponse = courseRes.status === 'fulfilled' ? await courseRes.value.json() : null;
-      if (!courseApiResponse || !courseApiResponse.data) {
-        throw new Error("Core course data (mainCourseDataFromApi) is missing or invalid in API response from /get-cours.");
-      }
-      const mainCourseDataFromApi = courseApiResponse.data;
-      console.log("CourseDetailsPage: fetchCourseData - Raw mainCourseDataFromApi:", mainCourseDataFromApi);
 
-      // Check for worksheets and reviews within mainCourseDataFromApi
-      const apiWorksheets = mainCourseDataFromApi.worksheets;
-      const apiReviews = mainCourseDataFromApi.reviews;
 
-      if (!apiWorksheets || !Array.isArray(apiWorksheets)) {
-        console.warn("CourseDetailsPage: fetchCourseData - `worksheets` array not found or not an array in mainCourseDataFromApi. Assuming empty.");
-      }
-      if (!apiReviews || !Array.isArray(apiReviews)) {
-        console.warn("CourseDetailsPage: fetchCourseData - `reviews` array not found or not an array in mainCourseDataFromApi. Assuming empty.");
-      }
-      
-      // --- Process Questions ---
-      let mappedQuestions: QuestionData[] = [];
-      if (questionsRes.status === 'fulfilled' && questionsRes.value.ok) {
-        const questionsApiResponse = await questionsRes.value.json();
-        if (questionsApiResponse.data && Array.isArray(questionsApiResponse.data)) {
-          mappedQuestions = questionsApiResponse.data.map((item: any): QuestionData => ({
-            id: item.question_id?.toString() || `q-${Math.random()}`, // Fallback ID
-            text: item.question || "No question text",
+      try {
+        const allCoursesUrl = `${API_BASE_URL}/student/get-all-course`;
+        const [allCoursesRes, questionsRes, ratingRes] =
+          await Promise.allSettled([
+            fetch(allCoursesUrl, { headers: baseHeaders }),
+            fetch(`${API_BASE_URL}/student/get-quation-answer/${idToFetch}`, {
+              headers: baseHeaders, // Uses the same headers as above
+            }),
+            fetch(`${API_BASE_URL}/student/rating/${idToFetch}`, {
+              headers: baseHeaders, // Uses the same headers as above
+            }),
+          ]);
+
+        let targetCourseFromList: CourseListItemFromApi | undefined;
+        if (allCoursesRes.status === "fulfilled" && allCoursesRes.value.ok) {
+          const allCoursesApiResponse = await allCoursesRes.value.json();
+          const coursesListFromApi: CourseListItemFromApi[] = Array.isArray(
+            allCoursesApiResponse
+          )
+            ? allCoursesApiResponse
+            : allCoursesApiResponse.data || [];
+
+          targetCourseFromList = coursesListFromApi.find(
+            (c) => c.id?.toString() === idToFetch.toString()
+          );
+
+          if (!targetCourseFromList) {
+            throw new Error(`Course with ID "${idToFetch}" not found in the general list.`);
+          }
+        } else if (allCoursesRes.status === 'rejected' || (allCoursesRes.status === 'fulfilled' && !allCoursesRes.value.ok)) {
+             throw new Error(`Failed to fetch course list: ${allCoursesRes.status === 'rejected' ? allCoursesRes.reason : (allCoursesRes.value ? await allCoursesRes.value.text() : 'Unknown error')}`);
+        }
+
+
+        let mappedQuestions: QuestionData[] = [];
+        if (questionsRes.status === "fulfilled" && questionsRes.value.ok) {
+          const qData = await questionsRes.value.json();
+          const qArray = Array.isArray(qData.data) ? qData.data : (Array.isArray(qData) ? qData : []);
+          mappedQuestions = qArray.map((item: any) => ({
+            id: item.question_id?.toString() || item.id?.toString() || Math.random().toString(),
+            text: item.question || "N/A",
             answer: item.answer,
-            createdAt: item.question_time,
+            createdAt: item.question_time || new Date().toISOString(),
             student: { name: item.student_name || "Anonymous" },
           }));
         }
-        console.log("CourseDetailsPage: fetchCourseData - Mapped Q&A data (mappedQuestions):", mappedQuestions);
-      } else if (questionsRes.status === 'rejected' || (questionsRes.status === 'fulfilled' && !questionsRes.value.ok)) {
-        const qError = questionsRes.status === 'rejected' ? questionsRes.reason : await (questionsRes.status === 'fulfilled' && questionsRes.value.json())?.message;
-        console.warn("CourseDetailsPage: Failed to fetch Q&A data:", qError || "Unknown Q&A fetch error. Questions will be empty.");
-      }
 
-      // --- Process Ratings ---
-      let avgRating = 0;
-      let totalRatingsVal = 0;
-      if (ratingRes.status === 'fulfilled' && ratingRes.value.ok) {
-        const ratingApiResponse = await ratingRes.value.json();
-        avgRating = parseFloat(ratingApiResponse.average_rating) || 0;
-        totalRatingsVal = parseInt(ratingApiResponse.total_ratings, 10) || 0;
-      } else if (ratingRes.status === 'rejected' || (ratingRes.status === 'fulfilled' && !ratingRes.value.ok)) {
-        const rError = ratingRes.status === 'rejected' ? ratingRes.reason : await (ratingRes.status === 'fulfilled' && ratingRes.value.json())?.message;
-        console.warn("CourseDetailsPage: Failed to fetch rating data:", rError || "Unknown rating fetch error.");
-      }
-      
-      // --- Process Bookmark Status ---
-      if (bookmarkStatusRes && bookmarkStatusRes.status === 'fulfilled' && bookmarkStatusRes.value?.ok) {
-        const bookmarkData = await bookmarkStatusRes.value.json();
-        setIsBookmarked(bookmarkData.isBookmarked === true);
-      } else if (bookmarkStatusRes && (bookmarkStatusRes.status === 'rejected' || (bookmarkStatusRes.status === 'fulfilled' && !bookmarkStatusRes.value?.ok))) {
-          const bError = bookmarkStatusRes.status === 'rejected' ? bookmarkStatusRes.reason : await (bookmarkStatusRes.status === 'fulfilled' && bookmarkStatusRes.value?.json())?.message;
-          console.warn("CourseDetailsPage: Failed to fetch bookmark status:", bError || "Unknown bookmark status error.");
-      }
+        let avgRating = 0;
+        let fetchedReviews: ReviewData[] = [];
+        if (ratingRes.status === "fulfilled" && ratingRes.value.ok) {
+          const rData = await ratingRes.value.json();
+          avgRating = parseFloat(rData.average_rating) || 0;
+        }
+        
+        if (!targetCourseFromList) {
+            throw new Error(`Course with ID "${idToFetch}" not found.`);
+        }
 
-      // Map data with robust defaults
-      const finalCourseData: CourseDetail = {
-        id: mainCourseDataFromApi.id?.toString() || courseId || `temp-${Date.now()}`,
-        title: mainCourseDataFromApi.title || "Untitled Course",
-        description: mainCourseDataFromApi.description || "No description provided.",
-        department: mainCourseDataFromApi.department_name || mainCourseDataFromApi.department || "N/A",
-        year: mainCourseDataFromApi.year || new Date().getFullYear(),
-        image: mainCourseDataFromApi.image || null,
-        worksheets: (apiWorksheets || []).map((ws: any) => ({ 
-            id: ws.id?.toString() || `ws-${Math.random()}`,
-            title: ws.title || "Untitled Worksheet",
-            pages: ws.pages || 0,
-            fileUrl: ws.fileUrl || "", // Essential for download link
-            section: ws.section || "General",
-            description: ws.description || ""
-        })),
-        benefits: mainCourseDataFromApi.benefits || [],
-        prerequisites: mainCourseDataFromApi.prerequisites || [],
-        courseContent: (mainCourseDataFromApi.courseContent || []).map((cc: any) => ({ 
-            id: cc.id?.toString() || `cc-${Math.random()}`,
-            title: cc.title || "Untitled Content Item",
-            description: cc.description || ""
-        })),
-        reviews: (apiReviews || []).map((r: any) => ({
-            id: r.id?.toString() || r.review_id?.toString() || `rev-${Math.random()}`,
-            comment: r.comment || "No comment",
-            rating: Number(r.rating) || 0, // Ensure rating is a number
-            createdAt: r.createdAt || r.review_date, // Expecting valid date string
-            student: r.student || { name: r.student_name || "Anonymous" }
-        })),
-        questions: mappedQuestions,
-        averageRating: avgRating,
-        totalStudents: Number(mainCourseDataFromApi.total_students || mainCourseDataFromApi.totalStudents || totalRatingsVal) || 0,
-        instructor: mainCourseDataFromApi.instructor ? { 
-            name: mainCourseDataFromApi.instructor.name || "Instructor N/A", 
-            id: mainCourseDataFromApi.instructor.id 
-        } : undefined,
-      };
-      
-      setCourse(finalCourseData);
-      console.log("CourseDetailsPage: fetchCourseData - Successfully processed and set `course` state:", finalCourseData);
+        const finalCourseData: CourseDetail = {
+          id: targetCourseFromList.id.toString(),
+          title: targetCourseFromList.title || "Untitled Course",
+          description:
+            targetCourseFromList.description || "No description available.",
+          department: targetCourseFromList.department_name || "N/A",
+          year: targetCourseFromList.year || "N/A",
+          image: targetCourseFromList.image || null,
+          worksheets: (targetCourseFromList as any).worksheets || [],
+          benefits: (targetCourseFromList as any).benefits || [],
+          prerequisites: (targetCourseFromList as any).prerequisites || [],
+          courseContent: (targetCourseFromList as any).courseContent || [],
+          reviews: (targetCourseFromList as any).reviews || fetchedReviews,
+          questions: mappedQuestions,
+          averageRating: avgRating,
+          totalStudents: Number(targetCourseFromList.total_students || 0),
+          course_tag: targetCourseFromList.course_tag,
+        };
 
-    } catch (err: any) {
-      console.error(`CourseDetailsPage: CRITICAL ERROR in fetchCourseData for courseId ${courseId}:`, err);
-      toast.error(err.message || "Failed to load course data. Check console for details.");
-      setError(err.message || "Could not load course information.");
-      if (!isRetry) setCourse(null);
-    } finally {
-      if (!isRetry) setLoading(false);
-      console.log("CourseDetailsPage: fetchCourseData - END");
-    }
-  }, [courseId, getAuthToken, getRole]);
+        setCourse(finalCourseData);
+        setError(null);
+      } catch (err: any) {
+        console.error("Error fetching course data:", err);
+        toast.error(err.message || "Failed to load course details");
+        setError(err.message || "Could not load course information");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [getAuthInfo]
+  );
 
   useEffect(() => {
-    console.log("CourseDetailsPage: useEffect[courseId, params] triggered. Current courseId:", courseId);
-    if (courseId) {
-      fetchCourseData();
-    } else if (params && Object.keys(params).length > 0 && !courseId) {
-      console.error("CourseDetailsPage: useEffect - Course ID is invalid in params (e.g., /ClientCourse/undefined).");
-      setError("Course ID is invalid or missing from the URL.");
-      setLoading(false);
-    } else if (!params || Object.keys(params).length === 0) {
-        console.log("CourseDetailsPage: useEffect - Params not yet available from router. Waiting for Next.js to provide params...");
+    if (courseIdFromParams) {
+      fetchCourseData(courseIdFromParams);
     }
-  }, [courseId, params, fetchCourseData]);
+  }, [courseIdFromParams, fetchCourseData]);
 
+  const handleQuestionSubmit = async () => {
+    if (!courseIdFromParams || !newQuestionText.trim()) {
+      toast.error("Question text cannot be empty.");
+      return;
+    }
 
-  const handleQuestionSubmit = async () => { /* ... (Keep implementation from previous full code) ... */ 
-    if (!newQuestionText.trim()) { toast.error("Question cannot be empty."); return; }
-    const token = getAuthToken();
-    if (!token) { toast.error("Please log in to ask a question."); return; }
-    
-    const toastId = toast.loading("Submitting question...");
     try {
-      const response = await fetch(`${API_BASE_URL}/student/ask-quation`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
-        body: JSON.stringify({ question: newQuestionText, courseId: courseId })
-      });
-      const responseData = await response.json();
-      if (!response.ok || !responseData.status) {
-        throw new Error(responseData.message || 'Question submission failed');
+      const { token, role: userRole } = getAuthInfo(); // Get token and role
+
+      if (!token || !userRole) { // Check if both token and role exist
+        toast.error("Authentication information is missing. Please log in again.");
+        return;
       }
-      toast.success("Question submitted successfully!", { id: toastId });
+
+      // Construct headers according to the backend's expectation
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+        "role": userRole, // Send the role header
+      };
+      headers[`${userRole}-token`] = token; // Send the token under the dynamic header name (e.g., "student-token")
+
+
+      const response = await fetch(`${API_BASE_URL}/student/ask-quation`, {
+        method: "POST",
+        headers: headers, // Use the constructed headers
+        body: JSON.stringify({
+          question: newQuestionText,
+          course_id: courseIdFromParams,
+        }),
+      });
+
+      if (!response.ok) {
+        // Try to parse error message from backend, otherwise use a default
+        const errorData = await response.json().catch(() => ({ message: `Request failed with status ${response.status}` }));
+        throw new Error(errorData.message || "Server error during question submission.");
+      }
+      
+      toast.success("Question submitted successfully!");
       setNewQuestionText("");
-      fetchCourseData(true);
-    } catch (err: any) {
-      toast.error(err.message, { id: toastId });
+      fetchCourseData(courseIdFromParams, true); 
+    } catch (error: any) {
+      toast.error(error.message || "Failed to submit question");
+      console.error("Question submission error:", error);
     }
   };
 
-  const handleReviewSubmit = async () => { /* ... (Keep implementation from previous full code) ... */ 
-    if (reviewRating === 0) { toast.error("Please select a rating."); return; }
-    if (!reviewCommentText.trim()) { toast.error("Review comment cannot be empty."); return; }
-    const token = getAuthToken();
-    if (!token) { toast.error("Please log in to submit a review."); return; }
-
-    const toastId = toast.loading("Submitting review...");
+  const handleReviewSubmit = async () => {
+    if (!courseIdFromParams || !reviewCommentText.trim() || reviewRating === 0) {
+      toast.error("Please provide a rating and a comment for your review.");
+      return;
+    }
+    
     try {
-      const [commentRes, ratingRes] = await Promise.all([
+      const { token, role: userRole } = getAuthInfo(); // Get token and role
+      if (!token || !userRole) {
+        toast.error("You must be logged in to submit a review.");
+        return;
+      }
+
+      // Construct headers for review and rating submissions
+      // Assuming these endpoints also use the new authentication scheme
+      const reviewHeaders: HeadersInit = {
+        "Content-Type": "application/json",
+        "role": userRole,
+      };
+      reviewHeaders[`${userRole}-token`] = token;
+
+      await Promise.all([
         fetch(`${API_BASE_URL}/student/give-comment`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ comment: reviewCommentText, courseId: courseId })
+          method: "POST",
+          headers: reviewHeaders,
+          body: JSON.stringify({ comment: reviewCommentText, course_id: courseIdFromParams, rating: reviewRating }),
         }),
         fetch(`${API_BASE_URL}/student/rateing`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ rating: reviewRating, course_id: courseId })
-        })
+          method: "POST",
+          headers: reviewHeaders, 
+          body: JSON.stringify({ rating: reviewRating, course_id: courseIdFromParams }),
+        }),
       ]);
 
-      const commentData = await commentRes.json();
-      const ratingData = await ratingRes.json();
-
-      if (!commentRes.ok || !commentData.status) {
-        throw new Error(commentData.message || 'Failed to submit comment.');
-      }
-      if (!ratingRes.ok || !ratingData.status) {
-        throw new Error(ratingData.message || 'Failed to submit rating.');
-      }
-
-      toast.success("Review submitted successfully!", { id: toastId });
+      toast.success("Review submitted successfully!");
       setReviewCommentText("");
       setReviewRating(0);
-      fetchCourseData(true);
-    } catch (err: any) {
-      toast.error(err.message, { id: toastId });
+      fetchCourseData(courseIdFromParams, true); 
+    } catch (error: any) {
+      toast.error(error.message || "Failed to submit review");
+      console.error("Review submission error:", error);
     }
   };
 
-  const toggleBookmark = async () => { /* ... (Keep implementation from previous full code) ... */ 
-    const token = getAuthToken();
-    if (!token) { toast.error("Please log in to manage bookmarks."); return; }
+  // --- Rest of the component remains the same ---
+  // (Loading states, error states, JSX structure, etc.)
 
-    const toastId = toast.loading(isBookmarked ? "Removing bookmark..." : "Adding bookmark...");
-    try {
-      const response = await fetch(`${API_BASE_URL}/student/count-answer`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ course_id: courseId })
-      });
-      const responseData = await response.json();
-      if (!response.ok || !responseData.status) {
-        throw new Error(responseData.message || 'Bookmark update failed');
-      }
-      setIsBookmarked(!isBookmarked);
-      toast.success(responseData.message || (isBookmarked ? "Course bookmarked!" : "Removed from bookmarks"), { id: toastId });
-    } catch (err: any) {
-      toast.error(err.message, { id: toastId });
-    }
-  };
-
-  // --- Render Logic ---
-  if (loading && !course) {
-    console.log("CourseDetailsPage: Rendering - Full page loading state (loading && !course).");
-    return ( /* ... Loading spinner ... */ 
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-indigo-600"></div>
-        <p className="mt-4 text-lg font-semibold text-gray-700 dark:text-gray-300">Loading Course Details...</p>
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
+        <CircularProgress size={50} />
+        <p className="mt-4 text-lg text-gray-700">Loading Course Details...</p>
       </div>
     );
   }
 
   if (error) {
-    console.log("CourseDetailsPage: Rendering - Error state:", error);
-    return ( /* ... Error display ... */ 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-        className="min-h-screen flex flex-col items-center justify-center text-center px-6 py-12 bg-gray-100 dark:bg-gray-900"
-      >
-        <FiAlertCircle className="w-16 h-16 text-red-500 mb-5" />
-        <h2 className="text-2xl sm:text-3xl font-semibold text-red-600 dark:text-red-400 mb-3">Error Loading Course</h2>
-        <p className="text-gray-700 dark:text-gray-300 mb-8 max-w-md leading-relaxed">{error}</p>
-        {courseId && (
-            <button onClick={() => fetchCourseData()}
-            className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2 shadow-md hover:shadow-lg">
-            <FiCheckCircle /> Try Again
-            </button>
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center text-center p-6 bg-gray-100">
+        <FiAlertCircle className="w-16 h-16 text-red-500 mb-4" />
+        <h2 className="text-2xl font-semibold text-red-600 mb-3">
+          Error Loading Course
+        </h2>
+        <p className="text-gray-700 mb-6 max-w-md">{error}</p>
+        {courseIdFromParams && (
+          <button
+            onClick={() => fetchCourseData(courseIdFromParams, true)}
+            className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+          >
+            Try Again
+          </button>
         )}
-      </motion.div>
+        <Link href="/courses" className="mt-4 text-indigo-600 hover:underline">
+          View Other Courses
+        </Link>
+      </div>
     );
   }
-  
+
   if (!course) {
-    console.log("CourseDetailsPage: Rendering - Course is null (and not loading/error). CourseId:", courseId);
-    return ( /* ... Course Not Found display ... */ 
-         <motion.div
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-            className="min-h-screen flex flex-col items-center justify-center text-center px-6 py-12 bg-gray-100 dark:bg-gray-900"
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center text-center p-6 bg-gray-100">
+        <VscBook className="w-16 h-16 text-gray-400 mb-4" />
+        <h2 className="text-2xl font-semibold text-gray-600 mb-3">
+          Course Not Found
+        </h2>
+        <Link
+          href="/courses"
+          className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
         >
-            <FiAlertCircle className="w-16 h-16 text-gray-400 mb-5" />
-            <h2 className="text-2xl sm:text-3xl font-semibold text-gray-600 dark:text-gray-400 mb-3">Course Not Found</h2>
-            <p className="text-gray-500 dark:text-gray-300 mb-8 max-w-md leading-relaxed">
-             The course you are looking for could not be found. Please check the URL or try navigating from the main courses page.
-            </p>
-             <Link href="/courses" className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2 shadow-md hover:shadow-lg">
-                Go to Courses
-            </Link>
-        </motion.div>
+          Browse Courses
+        </Link>
+      </div>
     );
   }
 
-  console.log("CourseDetailsPage: Rendering - Course data IS available. Course title:", course.title);
-  console.log("CourseDetailsPage: Rendering - Worksheets to render:", course.worksheets);
-  console.log("CourseDetailsPage: Rendering - Questions to render:", course.questions);
-  console.log("CourseDetailsPage: Rendering - Reviews to render:", course.reviews);
+  const courseImageUrl = course.image
+    ? course.image.startsWith("http")
+      ? course.image
+      : `${API_BASE_URL}${UPLOADS_BASE_PATH}${course.image}`
+    : DEFAULT_COURSE_IMAGE;
+  
+  const hasSpecificCourseImage = !!course.image;
 
 
-  const TABS = [ /* ... (Keep TABS definition) ... */ 
-    { id: 'overview', label: 'Overview', icon: <VscBook className="mr-1.5 sm:mr-2" /> },
-    { id: 'worksheets', label: 'Worksheets', icon: <FiDownloadCloud className="mr-1.5 sm:mr-2" /> },
-    { id: 'qna', label: 'Q&A', icon: <VscCommentDiscussion className="mr-1.5 sm:mr-2" /> },
-    { id: 'reviews', label: 'Reviews', icon: <AiOutlineStar className="mr-1.5 sm:mr-2" /> },
+  const TABS = [
+    { id: "overview", label: "Overview", icon: <VscBook className="mr-2" /> },
+    {
+      id: "worksheets",
+      label: `Worksheets`,
+      icon: <FiDownloadCloud className="mr-2" />,
+    },
+    {
+      id: "qna",
+      label: `Q&A (${course.questions.length})`,
+      icon: <VscCommentDiscussion className="mr-2" />,
+    },
+    {
+      id: "reviews",
+      label: `Reviews (${course.reviews.length})`,
+      icon: <AiOutlineStar className="mr-2" />,
+    },
   ];
 
-  const formatDate = (dateString: string | undefined): string => { /* ... (Keep formatDate definition) ... */ 
-    if (!dateString) return "Date not available";
-    try {
-        const date = new Date(dateString);
-        if (isNaN(date.getTime())) {
-            return "Invalid Date";
-        }
-        return date.toLocaleDateString('en-US', { 
-            year: 'numeric', month: 'short', day: 'numeric', 
-            hour: '2-digit', minute: '2-digit', hour12: true 
-        });
-    } catch (e) {
-        console.error("Error formatting date:", dateString, e);
-        return "Invalid Date Format";
-    }
-  };
-
-
   return (
-    <div className="w-[90%] 800px:w-[95%] max-w-7xl m-auto py-8 px-2 sm:px-4 dark:bg-gray-900 bg-gray-50">
-      <motion.div variants={staggerContainer(0.1, 0.1)} initial="hidden" animate="visible">
-        <div className="flex flex-col lg:flex-row gap-8 xl:gap-12">
-          {/* Left Column */}
-          <div className="lg:w-[65%] xl:w-[70%] space-y-6 sm:space-y-8">
-            <motion.header variants={slideInFromBottom} className="space-y-3 p-4 sm:p-0">
-              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white leading-tight">
+    <div className="min-h-screen w-full bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Link
+          href="/courses"
+          className="text-indigo-600 hover:underline flex items-center mb-6 text-sm"
+        >
+          <svg className="w-4 h-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fillRule="evenodd"
+              d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
+              clipRule="evenodd"
+            />
+          </svg>
+          Back to Courses
+        </Link>
+
+        <div className="flex flex-col lg:flex-row gap-8">
+          <div className="lg:w-2/3">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
+              <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
                 {course.title}
               </h1>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-600 dark:text-gray-300">
-                <Ratings rating={course.averageRating} size={20}/>
-                <span>({(course.reviews || []).length} Reviews)</span>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600 mb-4">
+                {course.averageRating > 0 && (
+                  <div className="flex items-center">
+                    <Ratings rating={course.averageRating} />
+                    <span className="ml-1">({course.averageRating.toFixed(1)})</span>
+                  </div>
+                )}
+                <span>{course.reviews.length} reviews</span>
                 <span>•</span>
-                <span className="capitalize">{course.department}</span>
-                <span>• Year {course.year}</span>
-                {course.totalStudents > 0 && ( <><span>•</span><span>{course.totalStudents.toLocaleString()} Students</span></> )}
+                <span>{course.department}</span>
+                <span>•</span>
+                <span>Year {course.year}</span>
               </div>
-              {course.instructor && course.instructor.name && (
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Instructor: <span className="font-medium text-gray-700 dark:text-gray-200">{course.instructor.name}</span>
-                </p>
-              )}
-            </motion.header>
 
-            <motion.nav variants={slideInFromBottom} className="sticky top-[60px] 800px:top-[80px] z-30 bg-gray-100/90 dark:bg-gray-800/90 backdrop-blur-md shadow-sm rounded-lg">
-                 <div className="flex flex-wrap justify-start gap-1 sm:gap-2 p-1.5 sm:p-2">
-                    {TABS.map((tab) => (
+              <div className="sticky top-0 bg-white z-20 border-b mb-6 shadow-sm">
+                <div className="flex gap-1 sm:gap-2 overflow-x-auto py-2 px-1">
+                  {TABS.map((tab) => (
                     <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        className={`flex items-center justify-center text-xs sm:text-sm px-3 py-2 sm:px-5 sm:py-2.5 rounded-md font-semibold transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-1 dark:focus:ring-offset-gray-900
-                        ${activeTab === tab.id
-                            ? "bg-indigo-600 text-white shadow-md"
-                            : "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700/60 hover:text-indigo-600 dark:hover:text-indigo-300"
-                        }`}
-                        aria-current={activeTab === tab.id ? "page" : undefined}
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`px-3 py-2 sm:px-4 rounded-md flex items-center text-sm font-medium whitespace-nowrap ${
+                        activeTab === tab.id
+                          ? "bg-indigo-600 text-white shadow"
+                          : "text-gray-600 hover:bg-gray-100 hover:text-gray-800"
+                      }`}
                     >
-                        {tab.icon} {tab.label}
+                      {tab.icon} {tab.label}
                     </button>
-                    ))}
+                  ))}
                 </div>
-            </motion.nav>
+              </div>
 
-            {/* Tab Content Area */}
-            <motion.div 
-                key={activeTab} // Important for re-triggering animation on tab change
-                initial={{ opacity: 0, y: 10 }} 
-                animate={{ opacity: 1, y: 0 }} 
-                transition={{ duration: 0.4, ease: "easeInOut" }}
-            >
-              {activeTab === 'overview' && (
-                <div className="space-y-6 sm:space-y-8">
-                  <ContentSection title="Course Description" icon={<VscBook className="text-indigo-500 dark:text-indigo-400"/>}>
-                    <p className="text-gray-700 dark:text-gray-300 whitespace-pre-line leading-relaxed">
-                      {course.description || "No description available."}
-                    </p>
-                  </ContentSection>
-                  <ContentSection title="What You'll Learn" icon={<FiCheckCircle className="text-green-500 dark:text-green-400"/>}>
-                    {(course.benefits && course.benefits.length > 0) ? (
-                        <ul className="space-y-3 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
-                            {course.benefits.map((benefit, index) => (
-                            <li key={`benefit-${index}`} className="flex items-start gap-3 text-gray-700 dark:text-gray-300">
-                                <span className="text-indigo-500 dark:text-indigo-400 mt-1 text-xl font-bold">✓</span>
-                                <p className="pt-0.5">{benefit}</p>
-                            </li>
-                            ))}
-                        </ul>
-                    ) : <EmptyState Icon={FiCheckCircle} message="Learning outcomes will be listed here."/> }
-                  </ContentSection>
-                  {(course.courseContent && course.courseContent.length > 0) && (
-                    <ContentSection title="Course Curriculum" icon={<VscBook className="text-purple-500 dark:text-purple-400"/>}>
-                      <div className="space-y-4">
-                        {course.courseContent.map(item => (
-                          <div key={item.id} className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg shadow-sm">
-                            <h4 className="font-semibold text-gray-800 dark:text-gray-100">{item.title}</h4>
-                            {item.description && <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{item.description}</p>}
-                          </div>
-                        ))}
+              <div className="space-y-8">
+                {activeTab === "overview" && (
+                  <>
+                    <section>
+                      <h2 className="text-xl font-semibold mb-4 text-gray-800">
+                        Course Description
+                      </h2>
+                      <div className="prose max-w-none text-gray-700 leading-relaxed">
+                        {course.description || "No description provided."}
                       </div>
-                    </ContentSection>
-                  )}
-                   {(course.prerequisites && course.prerequisites.length > 0) && (
-                    <ContentSection title="Prerequisites" icon={<FiAlertCircle className="text-yellow-500 dark:text-yellow-400"/>}>
-                        <ul className="space-y-2">
-                            {course.prerequisites.map((prerequisite, index) => (
-                            <li key={`prereq-${index}`} className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-                                <span className="text-sm">•</span> {prerequisite}
+                    </section>
+
+                    {course.benefits && course.benefits.length > 0 && (
+                      <section>
+                        <h2 className="text-xl font-semibold mb-4 text-gray-800">
+                          What You'll Learn
+                        </h2>
+                        <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+                          {course.benefits.map((benefit, index) => (
+                            <li key={index} className="flex items-start gap-2">
+                              <FiCheckCircle className="text-indigo-500 mt-1 flex-shrink-0" />
+                              <p className="text-gray-700">{benefit}</p>
                             </li>
-                            ))}
+                          ))}
                         </ul>
-                    </ContentSection>
-                  )}
-                </div>
-              )}
+                      </section>
+                    )}
+                  </>
+                )}
 
-              {activeTab === 'worksheets' && (
-                <ContentSection title="Worksheets" icon={<FiDownloadCloud className="text-teal-500 dark:text-teal-400"/>}>
-                  {(course.worksheets && course.worksheets.length > 0) ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
-                      {course.worksheets.map((worksheet) => (
-                        <motion.div 
-                            key={worksheet.id}
-                            variants={fadeIn("up", "tween", 0, 0.3)}
-                            className="p-5 bg-white dark:bg-gray-800/70 rounded-xl shadow-md hover:shadow-lg transition-shadow flex flex-col"
-                        >
-                          <div className="flex items-start gap-4 mb-3">
-                            <div className="p-2.5 sm:p-3 bg-indigo-100 dark:bg-indigo-900/40 rounded-md flex-shrink-0">
-                                <FiDownloadCloud className="text-xl sm:text-2xl text-indigo-600 dark:text-indigo-400" />
-                            </div>
-                            <h3 className="text-md sm:text-lg font-semibold text-gray-800 dark:text-white mt-1">{worksheet.title}</h3>
-                          </div>
-                          {worksheet.description && <p className="text-xs text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">{worksheet.description}</p>}
-                          <div className="text-xs text-gray-500 dark:text-gray-400 space-y-0.5">
-                            <p>Section: <span className="font-medium text-gray-700 dark:text-gray-300">{worksheet.section || 'General'}</span></p>
-                            <p>Pages: <span className="font-medium text-gray-700 dark:text-gray-300">{worksheet.pages || 'N/A'}</span></p>
-                          </div>
-                          {worksheet.fileUrl ? ( // Only show download if fileUrl exists
-                            <a
-                                href={`${API_BASE_URL}/uploads/${worksheet.fileUrl}`}
-                                download
-                                target="_blank" rel="noopener noreferrer"
-                                className="inline-flex items-center justify-center gap-2 text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-semibold mt-auto pt-4 text-sm"
-                            >
-                                <FiDownloadCloud size={16}/> Download Worksheet
-                            </a>
-                          ) : <p className="text-xs text-gray-400 dark:text-gray-500 mt-auto pt-4">Download not available</p>}
-                        </motion.div>
-                      ))}
-                    </div>
-                  ) : <EmptyState Icon={FiDownloadCloud} message="No worksheets available for this course yet."/>}
-                </ContentSection>
-              )}
-
-              {activeTab === 'qna' && (
-                <div className="space-y-6 sm:space-y-8">
-                  <ContentSection title="Ask a Question" icon={<AiOutlineQuestionCircle className="text-orange-500 dark:text-orange-400"/>}>
-                    {/* ... Q&A form ... */}
-                     <div className="flex flex-col sm:flex-row gap-3">
-                      <input type="text" value={newQuestionText} onChange={(e) => setNewQuestionText(e.target.value)} placeholder="Type your question here..." aria-label="Your question"
-                        className="flex-1 p-3 sm:p-3.5 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-black/20 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow" />
-                      <button onClick={handleQuestionSubmit} disabled={!newQuestionText.trim()}
-                        className="px-6 sm:px-7 py-3 sm:py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-colors shadow-md hover:shadow-lg disabled:opacity-60">
-                        Ask
-                      </button>
-                    </div>
-                  </ContentSection>
-                  <ContentSection title={`Questions & Answers (${(course.questions || []).length})`} icon={<VscCommentDiscussion className="text-cyan-500 dark:text-cyan-400"/>}>
-                    {(course.questions && course.questions.length > 0) ? (
-                      <div className="space-y-5 sm:space-y-6">
-                        {course.questions.slice().sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((question) => (
-                          <motion.div 
-                            key={question.id} 
-                            variants={fadeIn("up", "tween", 0, 0.3)}
-                            className="p-4 sm:p-5 bg-white dark:bg-gray-800/70 rounded-xl shadow-sm"
+                {activeTab === "worksheets" && (
+                  <section>
+                    <h2 className="text-xl font-semibold mb-4 text-gray-800">Worksheet</h2>
+                    {hasSpecificCourseImage ? (
+                      <div className="mb-6 p-4 border rounded-lg shadow-md bg-white">
+                        <h3 className="text-lg font-semibold mb-3 text-gray-900">{course.title} - Main Worksheet</h3>
+                        <div className="relative w-full h-64 md:h-96 bg-gray-100 rounded-md overflow-hidden mb-4 border">
+                          <Image
+                            src={courseImageUrl}
+                            alt={`${course.title} worksheet preview`}
+                            layout="fill"
+                            objectFit="contain"
+                            className="cursor-pointer transition-transform duration-300 hover:scale-105"
+                            onClick={() => setIsImageViewerOpen(true)}
+                            onError={(e) => { (e.target as HTMLImageElement).src = DEFAULT_COURSE_IMAGE; }}
+                          />
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-3">
+                          <button
+                            onClick={() => setIsImageViewerOpen(true)}
+                            className="flex-1 sm:flex-none justify-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors flex items-center gap-2"
                           >
-                            <div className="flex items-start gap-3 sm:gap-4">
-                              <VscCommentDiscussion className="text-xl sm:text-2xl text-indigo-500 dark:text-indigo-400 mt-1 flex-shrink-0" />
-                              <div className="flex-1">
-                                <p className="text-gray-800 dark:text-white font-medium text-sm sm:text-base">{question.text}</p>
-                                <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                  Asked by <span className="font-semibold">{question.student.name}</span> • {formatDate(question.createdAt)}
-                                </div>
-                                {question.answer && (
-                                  <div className="mt-2.5 sm:mt-3 pl-3 sm:pl-4 border-l-4 border-indigo-400 dark:border-indigo-500 py-1.5 sm:py-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-r-md">
-                                    <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-200 whitespace-pre-line">{question.answer}</p>
-                                    <div className="mt-1 text-xs text-indigo-600 dark:text-indigo-400 font-semibold">Official Answer</div>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </motion.div>
-                        ))}
+                            <FiDownloadCloud /> View & Zoom
+                          </button>
+                          <a
+                            href={courseImageUrl}
+                            download={`${course.title}_worksheet.${courseImageUrl.split('?')[0].split('.').pop() || 'jpg'}`}
+                            className="flex-1 sm:flex-none justify-center text-center px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors flex items-center gap-2"
+                          >
+                            <FiDownloadCloud /> Download Worksheet
+                          </a>
+                        </div>
                       </div>
-                    ) : <EmptyState Icon={VscCommentDiscussion} message="No questions have been asked yet. Be the first!"/>}
-                  </ContentSection>
-                </div>
-              )}
-
-              {activeTab === 'reviews' && (
-                <div className="space-y-6 sm:space-y-8">
-                  <ContentSection title="Share Your Experience" icon={<AiOutlineStar className="text-yellow-400"/>}>
-                    {/* ... Review form ... */}
-                    <div className="space-y-4">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                            <span className="text-gray-700 dark:text-gray-300 font-medium">Your Rating:</span>
-                            <Ratings rating={reviewRating} setRating={setReviewRating} interactive size={28} />
-                        </div>
-                        <textarea value={reviewCommentText} onChange={(e) => setReviewCommentText(e.target.value)} placeholder="Write your review..." aria-label="Your review comment" rows={4}
-                            className="w-full p-3 sm:p-3.5 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-black/20 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow min-h-[100px] sm:min-h-[120px]" />
-                        <button onClick={handleReviewSubmit} disabled={!reviewCommentText.trim() || reviewRating === 0}
-                            className="px-6 sm:px-7 py-3 sm:py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-colors shadow-md hover:shadow-lg disabled:opacity-60">
-                            Submit Review
-                        </button>
-                    </div>
-                  </ContentSection>
-                  <ContentSection title={`Student Reviews (${(course.reviews || []).length})`} icon={<AiOutlineStar className="text-yellow-500 dark:text-yellow-400"/>}>
-                     {(course.reviews && course.reviews.length > 0) ? (
-                        <div className="space-y-5 sm:space-y-6">
-                            {course.reviews.slice().sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((review) => (
-                            <motion.div 
-                                key={review.id} 
-                                variants={fadeIn("up", "tween", 0, 0.3)}
-                                className="p-4 sm:p-5 bg-white dark:bg-gray-800/70 rounded-xl shadow-sm"
-                            >
-                                <div className="flex items-start gap-3 mb-2">
-                                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-300 font-bold text-base sm:text-lg flex-shrink-0">
-                                        {(review.student.name || "A").charAt(0).toUpperCase()}
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base">{review.student.name || "Anonymous"}</p>
-                                        <div className="flex items-center gap-1.5 sm:gap-2 text-xs text-gray-500 dark:text-gray-400">
-                                            <Ratings rating={review.rating} size={14} />
-                                            <span>•</span>
-                                            <span>{formatDate(review.createdAt)}</span>
-                                        </div>
-                                    </div>
+                    ) : (
+                      <div className="p-4 border rounded-lg bg-gray-50 text-center text-gray-500">
+                        <VscBook size={24} className="mx-auto mb-2" />
+                        No main worksheet image available for this course.
+                      </div>
+                    )}
+                    {course.worksheets && course.worksheets.length > 0 && (
+                      <>
+                        <h2 className="text-xl font-semibold my-6 text-gray-800">Additional Downloadable Files</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {course.worksheets.map((ws) => (
+                            <div key={ws.id} className="bg-white p-4 rounded-lg shadow border">
+                              <div className="flex items-start gap-3 mb-2">
+                                <FiDownloadCloud className="text-indigo-600 text-xl mt-1 flex-shrink-0" />
+                                <div>
+                                  <h3 className="font-semibold text-gray-900">{ws.title}</h3>
+                                  {ws.section && <p className="text-xs text-indigo-500">{ws.section}</p>}
+                                  {ws.description && <p className="text-sm text-gray-600 mt-1">{ws.description}</p>}
                                 </div>
-                                <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-xs sm:text-sm pl-0 md:pl-[calc(2.5rem+0.75rem)] whitespace-pre-line">
-                                    {review.comment}
-                                </p>
-                            </motion.div>
-                            ))}
+                              </div>
+                              <a
+                                href={ws.fileUrl}
+                                download
+                                className="text-sm text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1"
+                              >
+                                <FiDownloadCloud size={16} /> Download File
+                              </a>
+                            </div>
+                          ))}
                         </div>
-                     ) : <EmptyState Icon={AiOutlineStar} message="No reviews yet for this course."/>}
-                  </ContentSection>
-                </div>
-              )}
+                      </>
+                    )}
+                  </section>
+                )}
+
+                {activeTab === "qna" && (
+                  <div className="space-y-8">
+                    <section className="bg-white p-4 sm:p-6 rounded-lg shadow border">
+                      <h2 className="text-xl font-semibold mb-4 text-gray-800">
+                        Ask a Question
+                      </h2>
+                      <div className="flex flex-col gap-3">
+                        <textarea
+                          value={newQuestionText}
+                          onChange={(e) => setNewQuestionText(e.target.value)}
+                          placeholder="Type your question here..."
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                          rows={4}
+                        />
+                        <button
+                          onClick={handleQuestionSubmit} // This now uses the updated header format
+                          disabled={!newQuestionText.trim()}
+                          className="bg-indigo-600 text-white px-6 py-2.5 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                        >
+                          Submit Question
+                        </button>
+                      </div>
+                    </section>
+
+                    <section>
+                      <h2 className="text-xl font-semibold mb-4 text-gray-800">
+                        Questions & Answers ({course.questions.length})
+                      </h2>
+                      {course.questions.length > 0 ? (
+                        <div className="space-y-4">
+                          {course.questions.map((question) => (
+                            <div
+                              key={question.id}
+                              className="bg-white p-4 rounded-lg shadow border"
+                            >
+                              <p className="font-medium text-gray-900">
+                                {question.text}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-1">Asked by {question.student.name} • {format(new Date(question.createdAt))}</p>
+                              {question.answer && (
+                                <div className="mt-3 pt-3 pl-3 border-l-4 border-indigo-400 bg-indigo-50/50">
+                                  <p className="text-sm font-semibold text-indigo-700 mb-1">
+                                    Instructor's Answer:
+                                  </p>
+                                  <p className="text-gray-700 text-sm">
+                                    {question.answer}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                         <div className="p-4 border rounded-lg bg-gray-50 text-center text-gray-500">
+                            No questions asked yet. Be the first!
+                         </div>
+                      )}
+                    </section>
+                  </div>
+                )}
+
+                {activeTab === "reviews" && (
+                  <div className="space-y-8">
+                    <section className="bg-white p-4 sm:p-6 rounded-lg shadow border">
+                      <h2 className="text-xl font-semibold mb-4 text-gray-800">
+                        Write a Review
+                      </h2>
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 sm:gap-4">
+                          <span className="font-medium text-gray-700">Your Rating:</span>
+                          <Ratings
+                            rating={reviewRating}
+                            setRating={setReviewRating}
+                            interactive
+                            size={24}
+                          />
+                        </div>
+                        <textarea
+                          value={reviewCommentText}
+                          onChange={(e) => setReviewCommentText(e.target.value)}
+                          placeholder="Share your thoughts about this course..."
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                          rows={4}
+                        />
+                        <button
+                          onClick={handleReviewSubmit} // This also uses the updated header format
+                          disabled={!reviewCommentText.trim() || reviewRating === 0}
+                          className="bg-indigo-600 text-white px-6 py-2.5 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                        >
+                          Submit Review
+                        </button>
+                      </div>
+                    </section>
+
+                    <section>
+                      <h2 className="text-xl font-semibold mb-4 text-gray-800">
+                        Student Reviews ({course.reviews.length})
+                      </h2>
+                       {course.reviews.length > 0 ? (
+                        <div className="space-y-4">
+                          {course.reviews.map((review) => (
+                            <div
+                              key={review.id}
+                              className="bg-white p-4 rounded-lg shadow border"
+                            >
+                              <div className="flex items-start gap-3 mb-2">
+                                <Avatar className="bg-indigo-100 text-indigo-600 w-10 h-10">
+                                  {review.student.name?.[0]?.toUpperCase() || 'S'}
+                                </Avatar>
+                                <div>
+                                  <p className="font-semibold text-gray-900">
+                                    {review.student.name}
+                                  </p>
+                                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                                    <Ratings rating={review.rating} size={16} />
+                                    <span>
+                                      {format(new Date(review.createdAt))}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                              <p className="text-gray-700 leading-relaxed">{review.comment}</p>
+                            </div>
+                          ))}
+                        </div>
+                       ) : (
+                         <div className="p-4 border rounded-lg bg-gray-50 text-center text-gray-500">
+                            No reviews yet for this course.
+                         </div>
+                       )}
+                    </section>
+                  </div>
+                )}
+              </div>
             </motion.div>
           </div>
 
-          {/* Right Sidebar */}
-          <aside className="lg:w-[35%] xl:w-[30%]">
-            {/* ... (Keep implementation from previous full code) ... */}
-            <div className="sticky top-[80px] 800px:top-[100px] space-y-6 sm:space-y-8">
-                <motion.div variants={slideInFromBottom} className="rounded-xl shadow-lg overflow-hidden aspect-[16/10] sm:aspect-[16/9] bg-gray-200 dark:bg-gray-700">
-                    {course.image ? (
-                        <Image src={`${API_BASE_URL}/uploads/${course.image}`} alt={`Promotional image for ${course.title}`} width={700} height={438}
-                            className="w-full h-full object-cover" priority={false} onError={(e) => { (e.target as HTMLImageElement).src = DEFAULT_COURSE_IMAGE; }} />
-                    ) : (
-                        <Image src={DEFAULT_COURSE_IMAGE} alt="Default course image" width={700} height={438} className="w-full h-full object-cover" />
-                    )}
-                </motion.div>
-              
-              <motion.div variants={slideInFromBottom} className="p-5 sm:p-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg">
-                <h3 className="text-lg sm:text-xl font-semibold mb-4 text-gray-900 dark:text-white">Course At a Glance</h3>
-                <dl className="space-y-2.5 sm:space-y-3 text-sm">
-                  <div className="flex justify-between items-center"> <dt className="text-gray-600 dark:text-gray-400">Department:</dt> <dd className="font-medium text-gray-800 dark:text-gray-200 text-right capitalize">{course.department}</dd> </div>
-                  <div className="flex justify-between items-center"> <dt className="text-gray-600 dark:text-gray-400">Academic Year:</dt> <dd className="font-medium text-gray-800 dark:text-gray-200">Year {course.year}</dd> </div>
-                  <div className="flex justify-between items-center"> <dt className="text-gray-600 dark:text-gray-400">Students Enrolled:</dt> <dd className="font-medium text-gray-800 dark:text-gray-200">{course.totalStudents > 0 ? course.totalStudents.toLocaleString() : "N/A"}</dd> </div>
-                  <div className="flex justify-between items-center"> <dt className="text-gray-600 dark:text-gray-400">Average Rating:</dt> <dd className="font-medium text-gray-800 dark:text-gray-200 flex items-center gap-1"> <AiOutlineStar className="text-yellow-400 text-base"/> {course.averageRating > 0 ? course.averageRating.toFixed(1) : "N/A"} </dd> </div>
-                </dl>
-              </motion.div>
+          <aside className="lg:w-1/3">
+            <div className="sticky top-8 space-y-6">
+              <div className="rounded-xl overflow-hidden aspect-video bg-gray-200 border shadow-lg">
+                <Image
+                  src={courseImageUrl}
+                  alt={course.title}
+                  width={400}
+                  height={225}
+                  className="w-full h-full object-cover"
+                  priority
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = DEFAULT_COURSE_IMAGE;
+                  }}
+                />
+              </div>
 
-              <motion.div variants={slideInFromBottom} className="p-5 sm:p-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg space-y-3 sm:space-y-4">
-                <ActionButton icon={isBookmarked ? <BsBookmarkFill className="text-indigo-500" /> : <BsBookmark />} onClick={toggleBookmark} ariaLabel={isBookmarked ? "Remove from bookmarks" : "Add to bookmarks"}>
-                  {isBookmarked ? "Bookmarked" : "Bookmark Course"}
-                </ActionButton>
-                <ActionButton icon={<BsChatDots />} onClick={() => toast.info("Contact instructor feature coming soon!")}>
-                  Contact Instructor
-                </ActionButton>
-                <ActionButton icon={<FiShare2 />} onClick={() => {
-                        if (navigator.share) { navigator.share({ title: course.title, text: `Check out this course: ${course.title}`, url: window.location.href }).catch(console.error); } 
-                        else { toast.info('Share not supported on this browser.'); }
-                    }}>
-                  Share Course
-                </ActionButton>
-              </motion.div>
+              <div className="bg-white p-4 rounded-lg shadow-md border">
+                <h3 className="text-lg font-semibold mb-4 text-gray-800">Course Details</h3>
+                <dl className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <dt className="text-gray-600">Department</dt>
+                    <dd className="text-gray-900 font-medium">{course.department}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-gray-600">Year</dt>
+                    <dd className="text-gray-900 font-medium">{course.year}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-gray-600">Enrolled Students</dt>
+                    <dd className="text-gray-900 font-medium">{course.totalStudents}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-gray-600">Average Rating</dt>
+                    <dd className="flex items-center gap-1 text-gray-900 font-medium">
+                      <AiOutlineStar className="text-yellow-400" />
+                      {course.averageRating > 0 ? course.averageRating.toFixed(1) : "N/A"}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+
+              <div className="space-y-3">
+                <button className="w-full flex items-center justify-center gap-2 p-3 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700">
+                  <BsChatDots /> Contact Instructor
+                </button>
+                <button className="w-full flex items-center justify-center gap-2 p-3 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700">
+                  <FiShare2 /> Share Course
+                </button>
+              </div>
             </div>
           </aside>
         </div>
-      </motion.div>
+      </div>
+      {isImageViewerOpen && hasSpecificCourseImage && (
+        <ImageViewerModal
+          imageUrl={courseImageUrl}
+          onClose={() => setIsImageViewerOpen(false)}
+          title={`${course.title} - Worksheet`}
+        />
+      )}
     </div>
   );
 };
-
-// Helper Components
-const ContentSection: React.FC<{ title: string; icon?: ReactNode; children: ReactNode; className?: string }> = ({ title, icon, children, className = "" }) => (
-    <motion.section 
-        variants={fadeIn("up", "tween", 0.1, 0.4)}
-        className={`p-5 sm:p-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg ${className}`}
-    >
-       <div className="flex items-center gap-2.5 sm:gap-3 mb-4 sm:mb-5 border-b dark:border-gray-700 pb-3">
-        {icon && <span className="text-xl sm:text-2xl flex-shrink-0">{icon}</span>}
-        <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">{title}</h2>
-      </div>
-      {children}
-    </motion.section>
-  );
-  
-const EmptyState: React.FC<{ Icon: React.ElementType; message: string }> = ({ Icon, message }) => (
-   <motion.div 
-    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-    className="text-center py-8 sm:py-12 text-gray-500 dark:text-gray-400"
-   >
-    <Icon className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 opacity-70" />
-    <p className="text-sm sm:text-base">{message}</p>
-    </motion.div>
-);
-
-const ActionButton: React.FC<{icon: ReactNode; onClick: () => void; children: ReactNode; ariaLabel?: string}> = ({icon, onClick, children, ariaLabel}) => (
-  <button onClick={onClick} aria-label={ariaLabel}
-    className="w-full flex items-center justify-center gap-2 sm:gap-2.5 p-2.5 sm:p-3 bg-gray-100 dark:bg-gray-700/60 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors font-medium text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1 dark:focus:ring-offset-gray-800">
-    {icon} {children}
-  </button>
-);
 
 export default CourseDetailsPage;
