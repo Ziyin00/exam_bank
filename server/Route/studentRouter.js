@@ -11,6 +11,7 @@ const { getCoursesByYear } = require('../controller/student/get.coursByYear')
 const { rateCourse } = require('../controller/student/reating')
 const { getCourseRating } = require('../controller/student/get.average.reating');
 const { userLogin } = require('../controller/userLogin/login');
+const { studentUpdate } = require('../controller/student/update.profile');
 
 const router = express.Router()
 
@@ -24,7 +25,7 @@ router.post('/ask-quation', askQuestion)
 router.post('/rateing', rateCourse)
 
 // put(update student)
-router.put('/edit-profile/:id', updateStudent)
+router.put('/edit-profile', studentUpdate)
 
 
 

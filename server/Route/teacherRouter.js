@@ -15,6 +15,7 @@ const { getAllQuestionsCount } = require('../controller/teachers/quation.count')
 const { getAllCourses } = require('../controller/teachers/get.all.course')
 const { getCourseRating } = require('../controller/teachers/get.average.rating')
 const { userLogin } = require('../controller/userLogin/login')
+const { getTeacherProfile } = require('../controller/teachers/get.teacher.profile')
 
 const router = express.Router()
 
@@ -32,6 +33,7 @@ router.get('/get-exams', getAllExams)
 router.get('/get-quations-count', getAllQuestionsCount)  //this for count message    you accpt like this total
 router.get('/get-all-course', getAllCourses)
 router.get('/rating/:id', getCourseRating)
+router.get('/get-profile', getTeacherProfile)
 
 // update profile/edit profile
 router.put('/edit-profile', updateTeacher)

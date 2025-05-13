@@ -21,6 +21,13 @@ const studentUpdate = [
     upload.single('image'),
     async (req, res) => {
 
+        const role = req.header("role");
+        const token = req.header(`${role}-token`);
+
+        if (!token || !role) {
+            return res.status(400).json({ status: false, message: "No token or role provided" });
+        }
+
 
         const { name, email, password } = req.body;
         const image = req.file ? req.file.filename : null;
@@ -73,7 +80,7 @@ const studentUpdate = [
             } else {
                 // if no password password
                 const sql = `
-                    UPDATE student
+                    UPDATE students
                     SET name = ?, email = ?,  image = IFNULL(?, image)
                     WHERE id = ?
                 `;
