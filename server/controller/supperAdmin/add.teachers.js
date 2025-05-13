@@ -4,6 +4,7 @@ const multer = require('multer');
 const connection = require('../../db');
 const nodemailer = require('nodemailer');
 
+// Multer config
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, 'public/image');
@@ -12,49 +13,56 @@ const storage = multer.diskStorage({
         cb(null, file.fieldname + '_' + Date.now() + path.extname(file.originalname));
     }
 });
-
 const upload = multer({ storage });
 
+// Nodemailer config
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: 'fuad47722@gmail.com', // replace with your Gmail
-        pass: 'bgar wimt znpt sbzh' // use app password from Google
+        user: 'fuad47722@gmail.com',
+        pass: 'bgar wimt znpt sbzh' // Gmail App Password
+    },
+    tls: {
+        rejectUnauthorized: false
     }
 });
 
+// Main controller
 const addTeachers = [
     upload.single('image'),
     async (req, res) => {
         const { name, email, department_id } = req.body;
         let { password } = req.body;
 
-        if (!name || !email || !department_id) {
+        if (!name || !email) {
             return res.status(200).json({ status: false, message: 'Missing required fields!' });
         }
 
+        // Optional department_id
+        const deptId = department_id || null;
+
+        // Generate default password
         function generateDefaultPassword(length = 7) {
             const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%!&*';
-            let password = '';
+            let pwd = '';
             for (let i = 0; i < length; i++) {
-                password += chars.charAt(Math.floor(Math.random() * chars.length));
+                pwd += chars.charAt(Math.floor(Math.random() * chars.length));
             }
-            return password;
+            return pwd;
         }
 
-
-        const defaultPassword = generateDefaultPassword()
+        const defaultPassword = generateDefaultPassword();
         if (!password) password = defaultPassword;
 
         try {
             const image = req.file ? req.file.filename : null;
 
             bcrypt.hash(password, 10, (err, hash) => {
-                const values = [name, email, hash, image, department_id];
-
                 if (err) {
-                    return res.status(500).json({ status: false, error: 'Hash error' });
+                    return res.status(500).json({ status: false, error: 'Hashing failed' });
                 }
+
+                const values = [name, email, hash, image, deptId];
 
                 const checkQuery = 'SELECT id FROM teachers WHERE email = ?';
                 connection.query(checkQuery, [email], (err, result) => {
@@ -64,19 +72,18 @@ const addTeachers = [
                     }
 
                     if (result.length > 0) {
-                        return res.status(200).json({ status: false, message: 'Email Already Exists!' });
+                        return res.status(200).json({ status: false, message: 'Email already exists!' });
                     }
 
                     const insertQuery = 'INSERT INTO teachers (name, email, password, image, department_id) VALUES (?)';
                     connection.query(insertQuery, [values], (err) => {
                         if (err) {
                             console.error(err.message);
-                            return res.status(500).json({ status: false, error: 'Insert query error' });
+                            return res.status(500).json({ status: false, error: 'Insert error' });
                         }
 
-                        // Send email with password
                         const mailOptions = {
-                            from: 'your_email@gmail.com',
+                            from: 'fuad47722@gmail.com',
                             to: email,
                             subject: 'Your Teacher Account Password',
                             html: `
@@ -89,7 +96,7 @@ const addTeachers = [
                             `
                         };
 
-                        transporter.sendMail(mailOptions, (err, info) => {
+                        transporter.sendMail(mailOptions, (err) => {
                             if (err) {
                                 console.error('Email send error:', err.message);
                                 return res.status(200).json({ status: true, message: 'Teacher added, but failed to send email' });

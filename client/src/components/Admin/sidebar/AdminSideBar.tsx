@@ -1,30 +1,48 @@
 "use client";
-import React, { useEffect, useState, useRef } from "react";
-import { Sidebar, Menu, MenuItem } from "react-pro-sidebar";
-import { Box, IconButton, Typography, useTheme, useMediaQuery, Modal, Button } from "@mui/material";
-import Link from "next/link";
-import Image from "next/image";
-import { useTheme as useNextTheme } from "next-themes";
-import avatarDefault from "../../../../public/assets/avatar.jpg";
+import React, {
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
+
+import { useTheme as useNextTheme } from 'next-themes';
+import Image from 'next/image';
+import { PiExam } from 'react-icons/pi';
+// React Icons
+import {
+  SiAnswer,
+  SiCoursera,
+} from 'react-icons/si';
+import {
+  Menu,
+  MenuItem,
+  Sidebar,
+} from 'react-pro-sidebar';
 
 // MUI Icons
 import {
   ArrowBackIos,
   ArrowForwardIos,
   BarChartOutlined,
-  Groups,
+  Close as GridCloseIcon,
+  ExitToApp,
   HomeOutlined,
+  Menu as GridMenuIcon,
   OndemandVideo,
   Quiz,
   Settings,
-  ExitToApp,
-  Close as GridCloseIcon,
-  Menu as GridMenuIcon,
-} from "@mui/icons-material";
+} from '@mui/icons-material';
+import {
+  Box,
+  Button,
+  IconButton,
+  Modal,
+  Typography,
+  useMediaQuery,
+  useTheme,
+} from '@mui/material';
 
-// React Icons
-import { SiAnswer, SiCoursera } from "react-icons/si";
-import { PiExam } from "react-icons/pi";
+import avatarDefault from '../../../../public/assets/avatar.jpg';
 
 interface ItemProps {
   title: string;
@@ -198,7 +216,7 @@ const AdminSideBar = () => {
                 </Typography>
               </Box>
 
-              <Item title="Users" to="/admin/users" icon={<Groups />} selected={selected} setSelected={setSelected} />
+              {/* <Item title="Users" to="/admin/users" icon={<Groups />} selected={selected} setSelected={setSelected} /> */}
               <Item title="Courses" to="/admin/courses" icon={<OndemandVideo />} selected={selected} setSelected={setSelected} />
               <Item title="Analytics" to="/admin/analytics" icon={<BarChartOutlined />} selected={selected} setSelected={setSelected} />
               
@@ -209,12 +227,12 @@ const AdminSideBar = () => {
               </Box>
 
               <Item title="Create Course" to="/admin/create-course" icon={<SiCoursera />} selected={selected} setSelected={setSelected} />
-              <Item title="Exams" to="/admin/exams" icon={<PiExam />} selected={selected} setSelected={setSelected} />
-              <Item title="Q&A" to="/admin/answers" icon={<SiAnswer />} selected={selected} setSelected={setSelected} />
+              <Item title="Exams" to="/admin/create-exam" icon={<PiExam />} selected={selected} setSelected={setSelected} />
+              <Item title="Q&A" to="/admin/answer" icon={<SiAnswer />} selected={selected} setSelected={setSelected} />
               <Item title="FAQ" to="/admin/faq" icon={<Quiz />} selected={selected} setSelected={setSelected} />
               
               <Box mt={4}>
-                <Item title="Settings" to="/admin/settings" icon={<Settings />} selected={selected} setSelected={setSelected} />
+                {/* <Item title="Settings" to="/admin/settings" icon={<Settings />} selected={selected} setSelected={setSelected} /> */}
                 <MenuItem onClick={logoutHandler} icon={<ExitToApp />} style={{ color: muiTheme.palette.error.main }}>
                   <Typography variant="body1" className="font-Poppins">
                     Logout

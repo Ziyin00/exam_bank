@@ -1,18 +1,18 @@
 const connection = require("../../db");
 
-const getCoursesByDepartment = async (req, res) => {
-    const departmentId = req.params.id;
+const getCoursesById = async (req, res) => {
+    const  Id = req.params.id;
 
     try {
         const sql = `
         SELECT id, title, description, image, category_id, department_id
         FROM courses
-        WHERE department_id = ?
+        WHERE Id = ?
     `;
 
-        connection.query(sql, [departmentId], (err, results) => {
+        connection.query(sql, [Id], (err, results) => {
             if (err) {
-                console.error("Error fetching courses by department:", err);
+                console.error("Error fetching courses by Id:", err);
                 return res.status(500).json({ status: false, message: "Internal server error" });
             }
 
@@ -23,4 +23,4 @@ const getCoursesByDepartment = async (req, res) => {
     }
 };
 
-module.exports = { getCoursesByDepartment };
+module.exports = { getCoursesById };

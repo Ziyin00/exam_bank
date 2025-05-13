@@ -3,7 +3,7 @@ const connection = require('../../db');
 const deleteCourse = (req, res) => {
     const courseId = req.params.id;
 
-    const deleteLinks = `DELETE FROM course_links WHERE course_id = ?`;
+    const deleteLinks = `DELETE FROM course_links WHERE id = ?`;
     const deleteCourse = `DELETE FROM courses WHERE id = ?`;
 
     connection.query(deleteLinks, [courseId], (err) => {
