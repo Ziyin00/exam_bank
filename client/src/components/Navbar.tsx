@@ -1,6 +1,18 @@
 "use client";
-import * as React from "react";
-import Link from "next/link";
+import * as React from 'react';
+
+import {
+  ChevronDown,
+  LogOut,
+  Menu,
+  Settings,
+  UserCircle2,
+  X,
+} from 'lucide-react';
+import Link from 'next/link';
+
+import { cn } from '../lib/utils';
+import { Button } from './ui/button';
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -9,10 +21,7 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
-} from "./ui/navigation-menu";
-import { cn } from "../lib/utils";
-import { Menu, X, UserCircle2, LogOut, Settings, ChevronDown } from "lucide-react";
-import { Button } from "./ui/button";
+} from './ui/navigation-menu';
 
 const components = [
   {
@@ -193,13 +202,13 @@ const Navbar = () => {
                 variant="outline"
                 className="rounded-full px-6 transition-all hover:border-blue-600 hover:bg-blue-50 hover:text-blue-600 dark:hover:border-blue-400 dark:hover:bg-blue-900/20"
               >
-                <Link href="/login">Sign In</Link>
+                <Link href="/Login">Sign In</Link>
               </Button>
               <Button
                 asChild
                 className="rounded-full bg-blue-600 px-6 text-white hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800"
               >
-                <Link href="/signup">Get Started</Link>
+                <Link href="/Signup">Get Started</Link>
               </Button>
             </div>
           )}
@@ -306,7 +315,7 @@ const Navbar = () => {
                   variant="outline"
                   className="w-full rounded-full dark:border-gray-600"
                 >
-                  <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Link href="/Login" onClick={() => setIsMobileMenuOpen(false)}>
                     Sign In
                   </Link>
                 </Button>

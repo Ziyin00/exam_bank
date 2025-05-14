@@ -52,8 +52,8 @@ interface User {
   status: "active" | "inactive" | string;
   created_at?: string;
   image?: string;
-  department_id?: string | number; // For student creation and data from backend
-  department_name?: string; // For student data display (from backend JOIN)
+  department_id?: string | number;
+  department_name?: string;
 }
 
 interface Department {
@@ -63,7 +63,7 @@ interface Department {
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3032";
-const IMAGE_PUBLIC_PATH = "/image/"; // Adjust if your images are served from /public/image/
+const IMAGE_PUBLIC_PATH = "/image/";
 
 const AllUsers: FC = () => {
   const { theme: nextThemeMode } = useNextTheme();
@@ -77,7 +77,7 @@ const AllUsers: FC = () => {
     email: "",
     name: "",
     role: "teacher",
-    department: "", // Stores department_id for student creation
+    department: "", // Stores department_id
   });
   const [departments, setDepartments] = useState<Department[]>([]);
   const [page, setPage] = useState(0);
@@ -116,69 +116,70 @@ const AllUsers: FC = () => {
       }
       console.log("[DEBUG] fetchAllUsers: Proceeding with headers:", headers);
 
-      const loggedInAccountApiUrl = `${API_BASE_URL}/admin/get-account`;
+      // Corrected: teachersApiUrl now fetches all teachers
+      const teachersApiUrl = `${API_BASE_URL}/admin/get-teachers`;
       const studentsApiUrl = `${API_BASE_URL}/admin/get-student`;
       const departmentsApiUrl = `${API_BASE_URL}/admin/get-departments`;
 
-      console.log(`[DEBUG] LoggedInAccount API URL: ${loggedInAccountApiUrl}`);
+      console.log(`[DEBUG] Teachers API URL: ${teachersApiUrl}`);
       console.log(`[DEBUG] Students API URL: ${studentsApiUrl}`);
       console.log(`[DEBUG] Departments API URL: ${departmentsApiUrl}`);
 
-      const [loggedInAccountRes, studentsRes, departmentsRes] =
+      const [teachersRes, studentsRes, departmentsRes] =
         await Promise.all([
-          axios.get(loggedInAccountApiUrl, { headers, withCredentials: true }),
+          axios.get(teachersApiUrl, { headers, withCredentials: true }),
           axios.get(studentsApiUrl, { headers, withCredentials: true }),
           axios.get(departmentsApiUrl, { headers, withCredentials: true }),
         ]);
       console.log("[DEBUG] All API calls completed.");
 
-      // --- CRITICAL DATA PARSING ---
-      const rawAccountData = loggedInAccountRes.data;
+      // --- Process Teachers Data ---
+      const rawTeachersData = teachersRes.data;
       console.log(
-        "[DEBUG] Raw loggedInAccountRes.data:",
-        JSON.stringify(rawAccountData, null, 2)
+        "[DEBUG] Raw teachersRes.data:",
+        JSON.stringify(rawTeachersData, null, 2)
       );
-      let accountDataToProcess: any = null;
+      let teacherDataArray: any[] = [];
 
-      if (rawAccountData) {
-        if (
-          rawAccountData.status === true &&
-          rawAccountData.data &&
-          typeof rawAccountData.data.id !== "undefined"
-        ) {
-          accountDataToProcess = rawAccountData.data;
-        } else if (typeof rawAccountData.id !== "undefined") {
-          accountDataToProcess = rawAccountData;
-        } else if (
-          rawAccountData.user &&
-          typeof rawAccountData.user.id !== "undefined"
-        ) {
-          accountDataToProcess = rawAccountData.user;
+      if (rawTeachersData) {
+        if (Array.isArray(rawTeachersData)) { // Endpoint returns a direct array
+          teacherDataArray = rawTeachersData;
+        } else if (rawTeachersData.status === true && Array.isArray(rawTeachersData.data)) {
+          teacherDataArray = rawTeachersData.data; // Common wrapper
+        } else if (Array.isArray(rawTeachersData.teachers)) {
+          teacherDataArray = rawTeachersData.teachers; // Another common wrapper
+        } else if (Array.isArray(rawTeachersData.items)) { // Yet another common wrapper
+            teacherDataArray = rawTeachersData.items;
         }
       }
 
-      if (accountDataToProcess) {
-        combinedUsersList.push({
-          id: accountDataToProcess.id,
-          name: accountDataToProcess.name,
-          email: accountDataToProcess.email,
-          role: headers.role as User["role"],
-          status: accountDataToProcess.status || "active",
-          created_at:
-            accountDataToProcess.created_at || new Date().toISOString(),
-          image: accountDataToProcess.image,
-        });
+      if (teacherDataArray.length > 0) {
+        const teacherUsers: User[] = teacherDataArray
+          .filter((teacher) => teacher && typeof teacher.id !== "undefined")
+          .map((teacher: any) => ({
+            id: teacher.id,
+            name: teacher.name,
+            email: teacher.email,
+            role: "teacher", // Explicitly set role
+            status: teacher.status || "active", // Assuming teachers might have a status
+            created_at: teacher.created_at || new Date().toISOString(),
+            image: teacher.image,
+            department_id: teacher.department_id, // Teachers might have a department
+            department_name: teacher.department_name, // If backend sends it (e.g., via JOIN)
+          }));
+        combinedUsersList.push(...teacherUsers);
         console.log(
-          "[DEBUG] Successfully processed and added account user:",
-          combinedUsersList[combinedUsersList.length - 1]
+          "[DEBUG] Successfully processed and added teacher users. Count:",
+          teacherUsers.length
         );
       } else {
         console.warn(
-          "[DEBUG] /admin/get-account: Could not extract valid user data from response structure. Data was:",
-          rawAccountData
+          "[DEBUG] /admin/get-teachers: Could not extract teacher array or array was empty. Data was:",
+          rawTeachersData
         );
       }
 
+      // --- Process Students Data ---
       const rawStudentsData = studentsRes.data;
       console.log(
         "[DEBUG] Raw studentsRes.data:",
@@ -230,6 +231,7 @@ const AllUsers: FC = () => {
         );
       }
 
+      // --- Process Departments Data (for modal) ---
       const rawDeptsData = departmentsRes.data;
       console.log(
         "[DEBUG] Raw departmentsRes.data:",
@@ -269,8 +271,8 @@ const AllUsers: FC = () => {
           rawDeptsData
         );
       }
-      // --- END OF CRITICAL DATA PARSING ---
 
+      // --- Combine and set unique users ---
       const uniqueUsers = Array.from(
         new Map(combinedUsersList.map((user) => [user.id, user])).values()
       );
@@ -333,18 +335,27 @@ const AllUsers: FC = () => {
     }
     setIsSubmitting(true);
     try {
-      const endpoint =
-        formData.role === "student"
-          ? `${API_BASE_URL}/admin/add-students`
-          : `${API_BASE_URL}/admin/add-account`;
+      let endpoint = "";
       const payload: any = {
         email: formData.email,
         name: formData.name,
-        role: formData.role,
+        // role: formData.role, // Backend for add-teachers might not need role, or derives it.
+                            // Backend for add-students might not need role, or derives it.
       };
 
       if (formData.role === "student") {
+        endpoint = `${API_BASE_URL}/admin/add-students`; // Assuming you have this endpoint
         payload.department_id = formData.department;
+      } else if (formData.role === "teacher") {
+        endpoint = `${API_BASE_URL}/admin/add-teachers`; // Using the specific endpoint
+        // If your add-teachers endpoint requires a department_id, add it here:
+        // if (formData.department) payload.department_id = formData.department;
+      } else {
+        // Handle other roles or default to add-account if it's a generic user creation
+        // For now, let's assume only student and teacher creation from this form
+        toast.error("Unsupported role for creation via this form.");
+        setIsSubmitting(false);
+        return;
       }
 
       await axios.post(endpoint, payload, {
@@ -374,11 +385,12 @@ const AllUsers: FC = () => {
     setIsSubmitting(true);
     try {
       let endpoint = "";
+      // The roles "admin" and "teacher" might be deleted via the same endpoint
       if (selectedUser.role === "student") {
         endpoint = `${API_BASE_URL}/admin/delete-student/${selectedUser.id}`;
       } else if (
         selectedUser.role === "teacher" ||
-        selectedUser.role === "admin"
+        selectedUser.role === "admin" // Assuming admin accounts are also handled like teachers for deletion
       ) {
         endpoint = `${API_BASE_URL}/admin/delete-teacher/${selectedUser.id}`;
       } else {
@@ -390,7 +402,7 @@ const AllUsers: FC = () => {
         headers: getAuthHeaders(),
         withCredentials: true,
       });
-      await fetchAllUsers(); // Re-fetch to ensure consistency
+      await fetchAllUsers();
       setDeleteOpen(false);
       setSelectedUser(null);
       toast.success("User deleted successfully!");
@@ -409,7 +421,7 @@ const AllUsers: FC = () => {
     newStatus: string,
     role: User["role"]
   ) => {
-    const originalUsers = JSON.parse(JSON.stringify(users));
+    const originalUsers = JSON.parse(JSON.stringify(users)); // Deep copy for rollback
     setUsers((prevUsers) =>
       prevUsers.map((u) =>
         u.id === userId ? { ...u, status: newStatus as User["status"] } : u
@@ -423,23 +435,24 @@ const AllUsers: FC = () => {
         endpoint = `${API_BASE_URL}/admin/edit-teacher/${userId}`;
       } else {
         toast.error("Unknown user role for status update.");
-        setUsers(originalUsers);
+        setUsers(originalUsers); // Rollback
         return;
       }
       await axios.put(
         endpoint,
-        { status: newStatus },
+        { status: newStatus }, // Send only the status to update
         { headers: getAuthHeaders(), withCredentials: true }
       );
       toast.success("Status updated successfully!");
-      // Optionally call fetchAllUsers() if backend updates more than just status
+      // No need to call fetchAllUsers() if only status is updated and backend reflects this.
+      // If backend updates other fields (e.g. updated_at) that you want to see, then re-fetch.
     } catch (error) {
       const axiosError = error as AxiosError;
       toast.error(
         (axiosError.response?.data as any)?.message ||
           "Failed to update status."
       );
-      setUsers(originalUsers);
+      setUsers(originalUsers); // Rollback on error
     }
   };
 
@@ -452,8 +465,7 @@ const AllUsers: FC = () => {
         user.name?.toLowerCase().includes(lowerSearchText) ||
         user.email?.toLowerCase().includes(lowerSearchText) ||
         user.role?.toLowerCase().includes(lowerSearchText) ||
-        (user.role === "student" &&
-          user.department_name?.toLowerCase().includes(lowerSearchText))
+        (user.department_name?.toLowerCase().includes(lowerSearchText))
     );
   }, [users, searchText]);
 
@@ -481,7 +493,7 @@ const AllUsers: FC = () => {
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          height: "calc(100vh - 100px)",
+          height: "calc(100vh - 100px)", // Adjust as per your layout
           p: 3,
         }}
       >
@@ -495,6 +507,7 @@ const AllUsers: FC = () => {
 
   return (
     <Box m={{ xs: "10px", md: "20px" }}>
+      {/* Header: Title, Search, Add User Button */}
       <Box
         display="flex"
         justifyContent="space-between"
@@ -525,7 +538,7 @@ const AllUsers: FC = () => {
             value={searchText}
             onChange={(e) => {
               setSearchText(e.target.value);
-              setPage(0);
+              setPage(0); // Reset to first page on search
             }}
             sx={{ width: { xs: "100%", sm: 250, md: 300 } }}
             InputProps={{
@@ -541,22 +554,22 @@ const AllUsers: FC = () => {
             color="primary"
             startIcon={<AiOutlineUserAdd />}
             onClick={() => {
-              setFormData({
+              setFormData({ // Reset form data for new user
                 email: "",
                 name: "",
-                role: "teacher",
+                role: "teacher", // Default role
                 department: "",
               });
               setOpenModal(true);
             }}
             sx={{ width: { xs: "100%", sm: "auto" }, textTransform: "none" }}
           >
-            {" "}
-            Add New User{" "}
+            Add New User
           </Button>
         </Box>
       </Box>
 
+      {/* Users Table */}
       <Paper
         sx={{
           width: "100%",
@@ -568,15 +581,15 @@ const AllUsers: FC = () => {
               : "0 4px 20px 0 rgba(0,0,0,0.08)",
         }}
       >
-        <TableContainer sx={{ maxHeight: "calc(100vh - 280px)" }}>
+        <TableContainer sx={{ maxHeight: "calc(100vh - 280px)" }}> {/* Adjust max height as needed */}
           <Table stickyHeader aria-label="users table">
             <TableHead
               sx={{
                 "& .MuiTableCell-head": {
                   backgroundColor:
                     nextThemeMode === "dark"
-                      ? "rgba(255, 255, 255, 0.05)"
-                      : "grey.100",
+                      ? "rgba(255, 255, 255, 0.05)" // Darker for dark mode
+                      : "grey.100", // Lighter for light mode
                   color: "text.primary",
                   fontWeight: 600,
                   borderBottom: `1px solid ${
@@ -614,7 +627,7 @@ const AllUsers: FC = () => {
                 },
               }}
             >
-              {loading && paginatedUsers.length === 0 && users.length > 0 ? (
+              {loading && paginatedUsers.length === 0 && users.length > 0 ? ( // Show loading spinner inside table if updating view
                 <TableRow>
                   <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
                     <CircularProgress size={24} />
@@ -627,7 +640,7 @@ const AllUsers: FC = () => {
                 paginatedUsers.map((user) => (
                   <TableRow
                     hover
-                    key={user.id}
+                    key={user.id} // Ensure unique key
                     sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
                   >
                     <TableCell>
@@ -637,16 +650,16 @@ const AllUsers: FC = () => {
                         <Avatar
                           src={
                             user.image
-                              ? user.image.startsWith("http")
+                              ? user.image.startsWith("http") // Absolute URL
                                 ? user.image
-                                : `${API_BASE_URL}${IMAGE_PUBLIC_PATH}${user.image}`
-                              : undefined
+                                : `${API_BASE_URL}${IMAGE_PUBLIC_PATH}${user.image}` // Relative path
+                              : undefined // No image, let Avatar handle fallback
                           }
                           alt={user.name || "User Avatar"}
                           sx={{
                             bgcolor: user.image
                               ? "transparent"
-                              : "primary.light",
+                              : "primary.light", // Fallback color if no image
                             width: 38,
                             height: 38,
                             fontSize: "1rem",
@@ -655,8 +668,7 @@ const AllUsers: FC = () => {
                               : "none",
                           }}
                         >
-                          {" "}
-                          {user.name?.[0]?.toUpperCase() || "U"}{" "}
+                          {user.name?.[0]?.toUpperCase() || "U"} {/* Fallback initial */}
                         </Avatar>
                         <Box>
                           <Typography
@@ -666,8 +678,7 @@ const AllUsers: FC = () => {
                             noWrap
                             title={user.name}
                           >
-                            {" "}
-                            {user.name || "N/A"}{" "}
+                            {user.name || "N/A"}
                           </Typography>
                           <Typography
                             variant="caption"
@@ -676,8 +687,7 @@ const AllUsers: FC = () => {
                             noWrap
                             title={user.email}
                           >
-                            {" "}
-                            {user.email || "N/A"}{" "}
+                            {user.email || "N/A"}
                           </Typography>
                         </Box>
                       </Box>
@@ -703,7 +713,10 @@ const AllUsers: FC = () => {
                         sx={{ fontWeight: 500, borderRadius: "6px" }}
                       />
                     </TableCell>
-                    <TableCell>{user.department_name || "N/A"}</TableCell>
+                    <TableCell>
+                        {/* Display department name if available, otherwise department ID or N/A */}
+                        {user.department_name || (user.role === 'student' && user.department_id ? `ID: ${user.department_id}` : "N/A")}
+                    </TableCell>
                     <TableCell>
                       <FormControl
                         fullWidth
@@ -724,7 +737,7 @@ const AllUsers: FC = () => {
                             fontSize: "0.875rem",
                             ".MuiSelect-select": {
                               py: "6px",
-                              pr: "24px !important",
+                              pr: "24px !important", // Ensure space for dropdown icon
                             },
                           }}
                         >
@@ -751,7 +764,7 @@ const AllUsers: FC = () => {
                     <TableCell align="center">
                       <Tooltip title="Send Email">
                         <IconButton
-                          component="a"
+                          component="a" // Make it a link
                           href={`mailto:${user.email}`}
                           color="primary"
                           size="small"
@@ -782,7 +795,7 @@ const AllUsers: FC = () => {
                       {searchText
                         ? "No users match your search criteria."
                         : loading
-                        ? "Loading users..."
+                        ? "Loading users..." // Should ideally be handled by the top-level loader
                         : "No users found."}
                     </Typography>
                     {!searchText && !loading && users.length === 0 && (
@@ -800,7 +813,7 @@ const AllUsers: FC = () => {
             </TableBody>
           </Table>
         </TableContainer>
-        {filteredUsers.length > rowsPerPage && (
+        {filteredUsers.length > rowsPerPage && ( // Only show pagination if needed
           <TablePagination
             rowsPerPageOptions={[5, 10, 25, 50]}
             component="div"
@@ -820,6 +833,7 @@ const AllUsers: FC = () => {
         )}
       </Paper>
 
+      {/* Add User Modal */}
       <Modal
         open={openModal}
         onClose={() => setOpenModal(false)}
@@ -847,8 +861,7 @@ const AllUsers: FC = () => {
             mb={3}
             fontWeight="bold"
           >
-            {" "}
-            Add New User{" "}
+            Add New User
           </Typography>
           <TextField
             fullWidth
@@ -887,27 +900,31 @@ const AllUsers: FC = () => {
                 setFormData({
                   ...formData,
                   role: newRole,
+                  // Reset department if role changes from student, or keep if changing to student
                   department: newRole === "student" ? formData.department : "",
                 });
               }}
             >
               <MenuItem value="teacher">Teacher</MenuItem>
               <MenuItem value="student">Student</MenuItem>
+              {/* Add "admin" role if you want to create admins from this modal */}
             </Select>
           </FormControl>
-          {formData.role === "student" && (
-            <FormControl fullWidth sx={{ mb: 3 }} required>
-              <InputLabel id="department-select-label">Department</InputLabel>
+          {/* Department field, shown only if role is student OR teacher (if teachers can be assigned to departments) */}
+          {(formData.role === "student" || formData.role === "teacher") && (
+            <FormControl fullWidth sx={{ mb: 3 }} required={formData.role === "student"}>
+              <InputLabel id="department-select-label"></InputLabel>
               <Select
                 labelId="department-select-label"
                 value={formData.department}
-                label="Department"
+                label=""
                 onChange={(e) =>
                   setFormData({ ...formData, department: e.target.value })
                 }
+                displayEmpty
               >
                 <MenuItem value="" disabled>
-                  <em>Select Department</em>
+                  <em>{formData.role === "student" ? "Select Department (Required)" : "Select Department (Optional)"}</em>
                 </MenuItem>
                 {departments.length > 0 ? (
                   departments.map((dept) => (
@@ -945,6 +962,7 @@ const AllUsers: FC = () => {
         </Box>
       </Modal>
 
+      {/* Delete Confirmation Modal */}
       <Modal
         open={deleteOpen}
         onClose={() => setDeleteOpen(false)}
@@ -972,16 +990,14 @@ const AllUsers: FC = () => {
             mb={2}
             fontWeight="bold"
           >
-            {" "}
-            🚨 Confirm Deletion{" "}
+            🚨 Confirm Deletion
           </Typography>
           <Typography textAlign="center" mb={3} color="text.secondary">
-            {" "}
             Are you sure you want to delete{" "}
             {selectedUser?.name
               ? `${selectedUser.name} (${selectedUser.email})`
               : "this user"}
-            ? This action cannot be undone.{" "}
+            ? This action cannot be undone.
           </Typography>
           <Box display="flex" justifyContent="center" gap={2}>
             <Button

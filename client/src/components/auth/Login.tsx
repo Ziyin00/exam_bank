@@ -1,16 +1,23 @@
 "use client";
-import React, { useState, useCallback } from "react";
-import { useFormik } from "formik";
-import * as Yup from "yup";
-import { AiOutlineEye, AiOutlineEyeInvisible, AiOutlineWarning } from "react-icons/ai";
-import { motion } from "framer-motion";
-import toast from "react-hot-toast";
-import Link from "next/link";
-import Image from "next/image";
-import { Loader2 } from "lucide-react";
-import axios from "axios";
-import LearningGif from "../../../public/assets/login-gif.gif";
-import avatar from "../../../public/assets/avatar.jpg";
+import React, {
+  useCallback,
+  useState,
+} from 'react';
+
+import axios from 'axios';
+import { useFormik } from 'formik';
+import { motion } from 'framer-motion';
+import { Loader2 } from 'lucide-react';
+import Image from 'next/image';
+import toast from 'react-hot-toast';
+import {
+  AiOutlineEye,
+  AiOutlineEyeInvisible,
+} from 'react-icons/ai';
+import * as Yup from 'yup';
+
+import avatar from '../../../public/assets/avatar.jpg';
+import LearningGif from '../../../public/assets/login-gif.gif';
 
 const validationSchema = Yup.object().shape({
   email: Yup.string()
@@ -57,7 +64,7 @@ const Login = () => {
         localStorage.setItem("role", role);
 
         if (role === "admin") window.location.href = "/admin";
-        else if (role === "teacher") window.location.href = "/admin";
+        else if (role === "teacher") window.location.href = "/teacher";
         else window.location.href = "/Home";
       } else {
         toast.error(data?.message || "Authentication failed");

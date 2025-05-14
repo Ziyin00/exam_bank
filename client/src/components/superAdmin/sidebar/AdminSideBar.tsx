@@ -1,30 +1,42 @@
 "use client";
-import React, { useEffect, useState, useRef } from "react";
-import { Sidebar, Menu, MenuItem } from "react-pro-sidebar";
-import { Box, IconButton, Typography, useTheme, useMediaQuery, Modal, Button } from "@mui/material";
-import Link from "next/link";
-import Image from "next/image";
-import { useTheme as useNextTheme } from "next-themes";
-import avatarDefault from "../../../../public/assets/avatar.jpg";
+import React, {
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
+
+import { useTheme as useNextTheme } from 'next-themes';
+import Image from 'next/image';
+import {
+  Menu,
+  MenuItem,
+  Sidebar,
+} from 'react-pro-sidebar';
 
 // MUI Icons
 import {
   ArrowBackIos,
   ArrowForwardIos,
   BarChartOutlined,
+  Close as GridCloseIcon,
+  ExitToApp,
   Groups,
   HomeOutlined,
-  OndemandVideo,
-  Quiz,
-  Settings,
-  ExitToApp,
-  Close as GridCloseIcon,
   Menu as GridMenuIcon,
-} from "@mui/icons-material";
+  OndemandVideo,
+  Settings,
+} from '@mui/icons-material';
+import {
+  Box,
+  Button,
+  IconButton,
+  Modal,
+  Typography,
+  useMediaQuery,
+  useTheme,
+} from '@mui/material';
 
-// React Icons
-import { SiAnswer, SiCoursera } from "react-icons/si";
-import { PiExam } from "react-icons/pi";
+import avatarDefault from '../../../../public/assets/avatar.jpg';
 
 interface ItemProps {
   title: string;
@@ -60,7 +72,7 @@ const AdminSideBar = () => {
 
   const fetchCourses = async () => {
     try {
-      const response = await fetch('/superAdmin/get-all-course', {
+      const response = await fetch('/admin/get-all-course', {
         credentials: 'include'
       });
       // if (!response.ok) throw new Error('Failed to fetch courses');
@@ -75,13 +87,13 @@ const AdminSideBar = () => {
   
   const confirmLogout = async () => {
     try {
-      const response = await fetch('/superAdmin/logout', {
+      const response = await fetch('/admin/logout', {
         method: 'POST',
         credentials: 'include'
       });
       
       if (response.ok) {
-        window.location.href = '/superAdmin/login';
+        window.location.href = '/admin/login';
       }
     } catch (err) {
       console.error("Logout failed:", err);
@@ -164,7 +176,7 @@ const AdminSideBar = () => {
                 <Box position="relative" display="inline-block">
                   <Image
                     src={avatarDefault}
-                    alt="superAdmin Avatar"
+                    alt="admin Avatar"
                     width={isMobile ? 80 : 120}
                     height={isMobile ? 80 : 120}
                     className="rounded-full border-4 border-primary"
@@ -181,16 +193,16 @@ const AdminSideBar = () => {
                   </Box>
                 </Box>
                 <Typography variant="h6" mt={2} color="text.primary">
-                  superAdmin Name
+                  admin Name
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  superAdministrator
+                  administrator
                 </Typography>
               </Box>
             )}
 
             <Box pl={isCollapsed && !isMobile ? 0 : 2}>
-              <Item title="Dashboard" to="/superAdmin" icon={<HomeOutlined />} selected={selected} setSelected={setSelected} />
+              <Item title="Dashboard" to="/admin" icon={<HomeOutlined />} selected={selected} setSelected={setSelected} />
               
               <Box my={2}>
                 <Typography variant="overline" color="text.secondary">
@@ -198,9 +210,9 @@ const AdminSideBar = () => {
                 </Typography>
               </Box>
 
-              <Item title="Users" to="/superAdmin/users" icon={<Groups />} selected={selected} setSelected={setSelected} />
-              <Item title="Courses" to="/superAdmin/courses" icon={<OndemandVideo />} selected={selected} setSelected={setSelected} />
-              <Item title="Analytics" to="/superAdmin/analytics" icon={<BarChartOutlined />} selected={selected} setSelected={setSelected} />
+              <Item title="Users" to="/admin/users" icon={<Groups />} selected={selected} setSelected={setSelected} />
+              <Item title="Courses" to="/admin/courses" icon={<OndemandVideo />} selected={selected} setSelected={setSelected} />
+              <Item title="Analytics" to="/admin/analytics" icon={<BarChartOutlined />} selected={selected} setSelected={setSelected} />
               
               {/* <Box my={2}>
                 <Typography variant="overline" color="text.secondary">
@@ -208,13 +220,13 @@ const AdminSideBar = () => {
                 </Typography>
               </Box>
 
-              <Item title="Create Course" to="/superAdmin/create-course" icon={<SiCoursera />} selected={selected} setSelected={setSelected} />
-              <Item title="Exams" to="/superAdmin/create-exam" icon={<PiExam />} selected={selected} setSelected={setSelected} />
-              <Item title="Q&A" to="/superAdmin/answers" icon={<SiAnswer />} selected={selected} setSelected={setSelected} />
-              <Item title="FAQ" to="/superAdmin/faq" icon={<Quiz />} selected={selected} setSelected={setSelected} /> */}
+              <Item title="Create Course" to="/admin/create-course" icon={<SiCoursera />} selected={selected} setSelected={setSelected} />
+              <Item title="Exams" to="/admin/create-exam" icon={<PiExam />} selected={selected} setSelected={setSelected} />
+              <Item title="Q&A" to="/admin/answers" icon={<SiAnswer />} selected={selected} setSelected={setSelected} />
+              <Item title="FAQ" to="/admin/faq" icon={<Quiz />} selected={selected} setSelected={setSelected} /> */}
               
               <Box mt={4}>
-                <Item title="Settings" to="/superAdmin/settings" icon={<Settings />} selected={selected} setSelected={setSelected} />
+                {/* <Item title="Settings" to="/admin/settings" icon={<Settings />} selected={selected} setSelected={setSelected} /> */}
                 <MenuItem onClick={logoutHandler} icon={<ExitToApp />} style={{ color: muiTheme.palette.error.main }}>
                   <Typography variant="body1" className="font-Poppins">
                     Logout
