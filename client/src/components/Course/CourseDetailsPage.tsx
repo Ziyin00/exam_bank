@@ -6,6 +6,7 @@ import React, {
   useState,
 } from 'react';
 
+// ... other imports ... (make sure all are present from your original code)
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -19,6 +20,7 @@ import {
   FiDownloadCloud,
   FiShare2,
 } from 'react-icons/fi';
+import { GiDiscussion } from 'react-icons/gi';
 import {
   VscBook,
   VscCommentDiscussion,
@@ -31,6 +33,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 
+// Interfaces (keep them as they were, they seem fine)
 interface CourseListItemFromApi {
   id: string | number;
   title: string;
@@ -40,6 +43,18 @@ interface CourseListItemFromApi {
   year?: number | string;
   course_tag?: string;
   total_students?: number | string;
+  // 'reviews' field from here is not reliable for all comments
+}
+
+interface CommentData {
+  id: string;
+  comment: string;
+  createdAt: string;
+  student: {
+    name: string;
+    student_id?: string | number;
+    avatar?: string | null;
+  };
 }
 
 interface CourseDetail {
@@ -52,7 +67,7 @@ interface CourseDetail {
   benefits: string[];
   prerequisites: string[];
   courseContent: CourseContentItem[];
-  reviews: ReviewData[];
+  comments: CommentData[]; // This will be populated by the dedicated comments fetch
   questions: QuestionData[];
   averageRating: number;
   totalStudents: number;
@@ -74,19 +89,6 @@ interface WorksheetData {
   description?: string;
 }
 
-interface ReviewData {
-  id: string;
-  comment: string;
-  rating: number;
-  createdAt: string;
-  student: {
-    name: string;
-    id?: string | number;
-    student_id?: string | number;
-    avatar?: string;
-  };
-}
-
 interface QuestionData {
   id: string;
   text: string;
@@ -103,24 +105,30 @@ interface CourseContentItem {
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3032";
-const DEFAULT_COURSE_IMAGE = "/assets/worksheet1.jpg";
-const UPLOADS_BASE_PATH = "/image/";
+const DEFAULT_COURSE_IMAGE = "/assets/worksheet1.jpg"; // Make sure this path is correct in your public folder
+const UPLOADS_BASE_PATH = "/image/"; // For course images
 
-const ImageViewerModal = ({ imageUrl, onClose, title }: { imageUrl: string; onClose: () => void; title: string }) => {
+// ImageViewerModal (keep as is)
+const ImageViewerModal = ({
+  imageUrl,
+  onClose,
+  title,
+}: {
+  imageUrl: string;
+  onClose: () => void;
+  title: string;
+}) => {
   const [zoom, setZoom] = useState(1);
-
-  const handleZoomIn = () => setZoom(prev => Math.min(prev * 1.2, 5));
-  const handleZoomOut = () => setZoom(prev => Math.max(prev / 1.2, 0.5));
+  const handleZoomIn = () => setZoom((prev) => Math.min(prev * 1.2, 5));
+  const handleZoomOut = () => setZoom((prev) => Math.max(prev / 1.2, 0.5));
   const handleResetZoom = () => setZoom(1);
-
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === "Escape") onClose();
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
-
   return (
     <div
       className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[1000] p-4"
@@ -131,30 +139,52 @@ const ImageViewerModal = ({ imageUrl, onClose, title }: { imageUrl: string; onCl
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center p-3 border-b sticky top-0 bg-white z-10">
-          <h3 className="text-lg font-semibold truncate pr-2" title={title}>{title}</h3>
+          <h3 className="text-lg font-semibold truncate pr-2" title={title}>
+            {title}
+          </h3>
           <div className="flex items-center gap-x-1 sm:gap-x-2 flex-shrink-0">
-            <button onClick={handleZoomIn} className="px-2 py-1.5 hover:bg-gray-200 rounded text-sm" title="Zoom In">Zoom In</button>
-            <button onClick={handleZoomOut} className="px-2 py-1.5 hover:bg-gray-200 rounded text-sm" title="Zoom Out">Zoom Out</button>
-            <button onClick={handleResetZoom} className="px-2 py-1.5 hover:bg-gray-200 rounded text-sm" title="Reset Zoom">Reset</button>
-            <button onClick={onClose} className="px-2 py-1.5 hover:bg-red-100 text-red-600 rounded text-sm" title="Close (Esc)">Close</button>
+            <button
+              onClick={handleZoomIn}
+              className="px-2 py-1.5 hover:bg-gray-200 rounded text-sm"
+              title="Zoom In"
+            >
+              Zoom In
+            </button>
+            <button
+              onClick={handleZoomOut}
+              className="px-2 py-1.5 hover:bg-gray-200 rounded text-sm"
+              title="Zoom Out"
+            >
+              Zoom Out
+            </button>
+            <button
+              onClick={handleResetZoom}
+              className="px-2 py-1.5 hover:bg-gray-200 rounded text-sm"
+              title="Reset Zoom"
+            >
+              Reset
+            </button>
+            <button
+              onClick={onClose}
+              className="px-2 py-1.5 hover:bg-red-100 text-red-600 rounded text-sm"
+              title="Close (Esc)"
+            >
+              Close
+            </button>
           </div>
         </div>
-        <div
-          className="flex-grow overflow-auto p-1 sm:p-2"
-        >
-          <div
-            className="flex items-center justify-center min-h-full"
-          >
+        <div className="flex-grow overflow-auto p-1 sm:p-2">
+          <div className="flex items-center justify-center min-h-full">
             <img
               src={imageUrl}
               alt={title}
               style={{
                 transform: `scale(${zoom})`,
-                transformOrigin: 'center',
-                transition: 'transform 0.15s ease-out',
-                maxWidth: '100%',
-                maxHeight: 'calc(90vh - 70px)',
-                display: 'block',
+                transformOrigin: "center",
+                transition: "transform 0.15s ease-out",
+                maxWidth: "100%",
+                maxHeight: "calc(90vh - 70px)",
+                display: "block",
               }}
               draggable="false"
             />
@@ -165,7 +195,6 @@ const ImageViewerModal = ({ imageUrl, onClose, title }: { imageUrl: string; onCl
   );
 };
 
-
 const CourseDetailsPage = () => {
   const params = useParams();
   const courseIdFromParams = params?.id as string | undefined;
@@ -175,20 +204,24 @@ const CourseDetailsPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
   const [newQuestionText, setNewQuestionText] = useState("");
-  const [reviewCommentText, setReviewCommentText] = useState("");
-  const [reviewRating, setReviewRating] = useState(0);
+  const [newCommentText, setNewCommentText] = useState("");
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
 
   const getAuthInfo = useCallback(() => {
     if (typeof window === "undefined")
       return { token: null, role: null, userId: null };
-    // This logic assumes 'student-token' is a specific key, 
-    // or 'token' is a generic one.
-    // For the backend provided, it will use the `role` to form `${role}-token` header name.
-    const token =
-      localStorage.getItem("token") || localStorage.getItem("student-token");
+    // Prioritize role-specific token if available, then generic 'token'
     const role = localStorage.getItem("role");
+    let token = null;
+    if (role) {
+      token = localStorage.getItem(`${role}-token`);
+    }
+    if (!token) {
+      // Fallback if role-specific token isn't found or role isn't set
+      token = localStorage.getItem("token");
+    }
     const userId = localStorage.getItem("user-id");
+    // console.log("AuthInfo Retrieved:", { token: token ? token.substring(0,10)+"..." : null, role, userId });
     return { token, role, userId };
   }, []);
 
@@ -197,79 +230,166 @@ const CourseDetailsPage = () => {
       if (!isRetry) {
         setLoading(true);
         setError(null);
-        setCourse(null);
+        setCourse(null); // Clear previous course data
       }
 
-      const { token, role: userRole } = getAuthInfo(); 
+      const { token, role: userRole } = getAuthInfo();
       const baseHeaders: HeadersInit = { "Content-Type": "application/json" };
-      // For GET requests, if they also need this new auth scheme, they'd need similar header adjustments.
-      // For now, assuming GET requests might use a different auth or are public.
-      // The original code used 'Authorization: Bearer ${token}' for GETs.
-      // If GETs ALSO need the new header format:
+
+      // Apply auth headers if token and role are present for all GET requests
+      // (Backend routes might be public or protected differently, adjust if needed)
       if (token && userRole) {
         baseHeaders["role"] = userRole;
         baseHeaders[`${userRole}-token`] = token;
-      } else if (token) { // Fallback to Bearer if role-specific is not fully set up but token exists
+      } else if (token) {
+        // Fallback for generic token if role-specific setup is partial
         baseHeaders["Authorization"] = `Bearer ${token}`;
       }
 
-
       try {
-        const allCoursesUrl = `${API_BASE_URL}/student/get-all-course`;
-        const [allCoursesRes, questionsRes, ratingRes] =
-          await Promise.allSettled([
-            fetch(allCoursesUrl, { headers: baseHeaders }),
-            fetch(`${API_BASE_URL}/student/get-quation-answer/${idToFetch}`, {
-              headers: baseHeaders, // Uses the same headers as above
-            }),
-            fetch(`${API_BASE_URL}/student/rating/${idToFetch}`, {
-              headers: baseHeaders, // Uses the same headers as above
-            }),
-          ]);
+        // --- Define URLs ---
+        const allCoursesUrl = `${API_BASE_URL}/student/get-all-course`; // To get basic course info
+        const courseDetailSpecifics = [
+          // Fetched if targetCourseFromList is found
+          fetch(`${API_BASE_URL}/student/get-quation-answer/${idToFetch}`, {
+            headers: baseHeaders,
+          }),
+          fetch(`${API_BASE_URL}/student/rating/${idToFetch}`, {
+            headers: baseHeaders,
+          }),
+          fetch(`${API_BASE_URL}/student/course/${idToFetch}/comments`, {
+            headers: baseHeaders,
+          }), // DEDICATED COMMENTS FETCH
+        ];
 
-        let targetCourseFromList: CourseListItemFromApi | undefined;
-        if (allCoursesRes.status === "fulfilled" && allCoursesRes.value.ok) {
-          const allCoursesApiResponse = await allCoursesRes.value.json();
-          const coursesListFromApi: CourseListItemFromApi[] = Array.isArray(
-            allCoursesApiResponse
-          )
-            ? allCoursesApiResponse
-            : allCoursesApiResponse.data || [];
-
-          targetCourseFromList = coursesListFromApi.find(
-            (c) => c.id?.toString() === idToFetch.toString()
+        // --- Step 1: Fetch the list of all courses to find the target course basic info ---
+        const allCoursesRes = await fetch(allCoursesUrl, {
+          headers: baseHeaders,
+        });
+        if (!allCoursesRes.ok) {
+          const errorText = await allCoursesRes.text();
+          throw new Error(
+            `Failed to fetch course list: ${allCoursesRes.status} ${errorText}`
           );
+        }
+        const allCoursesApiResponse = await allCoursesRes.json();
+        const coursesListFromApi: CourseListItemFromApi[] = Array.isArray(
+          allCoursesApiResponse
+        )
+          ? allCoursesApiResponse
+          : allCoursesApiResponse.data || [];
 
-          if (!targetCourseFromList) {
-            throw new Error(`Course with ID "${idToFetch}" not found in the general list.`);
-          }
-        } else if (allCoursesRes.status === 'rejected' || (allCoursesRes.status === 'fulfilled' && !allCoursesRes.value.ok)) {
-             throw new Error(`Failed to fetch course list: ${allCoursesRes.status === 'rejected' ? allCoursesRes.reason : (allCoursesRes.value ? await allCoursesRes.value.text() : 'Unknown error')}`);
+        const targetCourseFromList = coursesListFromApi.find(
+          (c) => c.id?.toString() === idToFetch.toString()
+        );
+
+        if (!targetCourseFromList) {
+          throw new Error(
+            `Course with ID "${idToFetch}" not found in the general list.`
+          );
         }
 
+        // --- Step 2: Fetch details (Q&A, Rating, Comments) for the specific course ---
+        const [questionsResSettled, ratingResSettled, commentsResSettled] =
+          await Promise.allSettled(courseDetailSpecifics);
 
         let mappedQuestions: QuestionData[] = [];
-        if (questionsRes.status === "fulfilled" && questionsRes.value.ok) {
-          const qData = await questionsRes.value.json();
-          const qArray = Array.isArray(qData.data) ? qData.data : (Array.isArray(qData) ? qData : []);
+        if (
+          questionsResSettled.status === "fulfilled" &&
+          questionsResSettled.value.ok
+        ) {
+          const qData = await questionsResSettled.value.json();
+          const qArray = Array.isArray(qData.data)
+            ? qData.data
+            : Array.isArray(qData)
+            ? qData
+            : [];
           mappedQuestions = qArray.map((item: any) => ({
-            id: item.question_id?.toString() || item.id?.toString() || Math.random().toString(),
+            id:
+              item.question_id?.toString() ||
+              item.id?.toString() ||
+              Math.random().toString(36).substring(2),
             text: item.question || "N/A",
             answer: item.answer,
             createdAt: item.question_time || new Date().toISOString(),
-            student: { name: item.student_name || "Anonymous" },
+            student: {
+              name: item.student_name || "Anonymous",
+              id: item.student_id?.toString() || item.id?.toString(),
+              student_id: item.student_id?.toString(),
+            },
           }));
+        } else if (
+          questionsResSettled.status === "rejected" ||
+          (questionsResSettled.status === "fulfilled" &&
+            !questionsResSettled.value.ok)
+        ) {
+          console.error(
+            "Failed to fetch Q&A:",
+            questionsResSettled.status === "rejected"
+              ? questionsResSettled.reason
+              : "API error"
+          );
         }
 
         let avgRating = 0;
-        let fetchedReviews: ReviewData[] = [];
-        if (ratingRes.status === "fulfilled" && ratingRes.value.ok) {
-          const rData = await ratingRes.value.json();
+        if (
+          ratingResSettled.status === "fulfilled" &&
+          ratingResSettled.value.ok
+        ) {
+          const rData = await ratingResSettled.value.json();
           avgRating = parseFloat(rData.average_rating) || 0;
+        } else if (
+          ratingResSettled.status === "rejected" ||
+          (ratingResSettled.status === "fulfilled" &&
+            !ratingResSettled.value.ok)
+        ) {
+          console.error(
+            "Failed to fetch rating:",
+            ratingResSettled.status === "rejected"
+              ? ratingResSettled.reason
+              : "API error"
+          );
         }
-        
-        if (!targetCourseFromList) {
-            throw new Error(`Course with ID "${idToFetch}" not found.`);
+
+        let fetchedCourseComments: CommentData[] = [];
+        if (
+          commentsResSettled.status === "fulfilled" &&
+          commentsResSettled.value.ok
+        ) {
+          const commentsApiResponse = await commentsResSettled.value.json();
+          if (
+            commentsApiResponse.status &&
+            Array.isArray(commentsApiResponse.data)
+          ) {
+            fetchedCourseComments = commentsApiResponse.data.map(
+              (c: any): CommentData => ({
+                id: c.id.toString(),
+                comment: c.comment,
+                createdAt: c.createdAt, // Assuming backend sends ISO string
+                student: {
+                  student_id: c.student.student_id?.toString(),
+                  name: c.student.name || "Anonymous User",
+                  avatar: c.student.avatar || null, // Expecting full URL or null from backend
+                },
+              })
+            );
+          } else {
+            console.warn(
+              "Comments API did not return expected data structure:",
+              commentsApiResponse
+            );
+          }
+        } else if (
+          commentsResSettled.status === "rejected" ||
+          (commentsResSettled.status === "fulfilled" &&
+            !commentsResSettled.value.ok)
+        ) {
+          console.error(
+            "Failed to fetch course comments:",
+            commentsResSettled.status === "rejected"
+              ? commentsResSettled.reason
+              : "API error"
+          );
         }
 
         const finalCourseData: CourseDetail = {
@@ -280,11 +400,14 @@ const CourseDetailsPage = () => {
           department: targetCourseFromList.department_name || "N/A",
           year: targetCourseFromList.year || "N/A",
           image: targetCourseFromList.image || null,
+          // These might come from targetCourseFromList if your 'get-all-course' includes them.
+          // If not, these will be empty or you'll need separate endpoints.
           worksheets: (targetCourseFromList as any).worksheets || [],
           benefits: (targetCourseFromList as any).benefits || [],
           prerequisites: (targetCourseFromList as any).prerequisites || [],
           courseContent: (targetCourseFromList as any).courseContent || [],
-          reviews: (targetCourseFromList as any).reviews || fetchedReviews,
+          // Crucially, use comments from the dedicated fetch
+          comments: fetchedCourseComments,
           questions: mappedQuestions,
           averageRating: avgRating,
           totalStudents: Number(targetCourseFromList.total_students || 0),
@@ -297,111 +420,115 @@ const CourseDetailsPage = () => {
         console.error("Error fetching course data:", err);
         toast.error(err.message || "Failed to load course details");
         setError(err.message || "Could not load course information");
+        setCourse(null); // Ensure course is null on error
       } finally {
         setLoading(false);
       }
     },
-    [getAuthInfo]
+    [getAuthInfo] // getAuthInfo is stable
   );
 
   useEffect(() => {
     if (courseIdFromParams) {
+      console.log("Fetching data for course ID:", courseIdFromParams);
       fetchCourseData(courseIdFromParams);
+    } else {
+      setLoading(false); // No ID, so not loading
+      setError("Course ID is missing from the URL.");
     }
-  }, [courseIdFromParams, fetchCourseData]);
+  }, [courseIdFromParams, fetchCourseData]); // fetchCourseData is memoized
 
   const handleQuestionSubmit = async () => {
     if (!courseIdFromParams || !newQuestionText.trim()) {
       toast.error("Question text cannot be empty.");
       return;
     }
+    const { token, role: userRole, userId } = getAuthInfo();
+    if (!token || !userRole) {
+      toast.error("Authentication is required. Please log in.");
+      return;
+    }
+    const headers: HeadersInit = {
+      "Content-Type": "application/json",
+      role: userRole,
+    };
+    headers[`${userRole}-token`] = token;
 
     try {
-      const { token, role: userRole } = getAuthInfo(); // Get token and role
-
-      if (!token || !userRole) { // Check if both token and role exist
-        toast.error("Authentication information is missing. Please log in again.");
-        return;
-      }
-
-      // Construct headers according to the backend's expectation
-      const headers: HeadersInit = {
-        "Content-Type": "application/json",
-        "role": userRole, // Send the role header
-      };
-      headers[`${userRole}-token`] = token; // Send the token under the dynamic header name (e.g., "student-token")
-
-
       const response = await fetch(`${API_BASE_URL}/student/ask-quation`, {
         method: "POST",
-        headers: headers, // Use the constructed headers
+        headers,
         body: JSON.stringify({
           question: newQuestionText,
           course_id: courseIdFromParams,
+          // student_id: userId, // Backend extracts student_id from token
         }),
       });
-
       if (!response.ok) {
-        // Try to parse error message from backend, otherwise use a default
-        const errorData = await response.json().catch(() => ({ message: `Request failed with status ${response.status}` }));
-        throw new Error(errorData.message || "Server error during question submission.");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.message || `Request failed: ${response.status}`
+        );
       }
-      
       toast.success("Question submitted successfully!");
       setNewQuestionText("");
-      fetchCourseData(courseIdFromParams, true); 
+      fetchCourseData(courseIdFromParams, true); // Re-fetch to show new question
     } catch (error: any) {
       toast.error(error.message || "Failed to submit question");
       console.error("Question submission error:", error);
     }
   };
 
-  const handleReviewSubmit = async () => {
-    if (!courseIdFromParams || !reviewCommentText.trim() || reviewRating === 0) {
-      toast.error("Please provide a rating and a comment for your review.");
+  const handleCommentSubmit = async () => {
+    if (!courseIdFromParams || !newCommentText.trim()) {
+      toast.error("Comment cannot be empty.");
       return;
     }
-    
+    const { token, role: userRole, userId } = getAuthInfo();
+    if (!token || !userRole) {
+      toast.error("Authentication is required. Please log in.");
+      return;
+    }
+    const headers: HeadersInit = {
+      "Content-Type": "application/json",
+      role: userRole,
+    };
+    headers[`${userRole}-token`] = token;
+
+    console.log(
+      "Submitting comment for course_id:",
+      courseIdFromParams,
+      "by user_id (from token):",
+      userId
+    );
     try {
-      const { token, role: userRole } = getAuthInfo(); // Get token and role
-      if (!token || !userRole) {
-        toast.error("You must be logged in to submit a review.");
-        return;
+      const response = await fetch(`${API_BASE_URL}/student/give-comment`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          comment: newCommentText,
+          course_id: courseIdFromParams,
+          // student_id: userId, // Backend extracts student_id from token
+        }),
+      });
+      const responseData = await response.json();
+      if (!response.ok || !responseData.status) {
+        throw new Error(
+          responseData.message || `Request failed: ${response.status}`
+        );
       }
-
-      // Construct headers for review and rating submissions
-      // Assuming these endpoints also use the new authentication scheme
-      const reviewHeaders: HeadersInit = {
-        "Content-Type": "application/json",
-        "role": userRole,
-      };
-      reviewHeaders[`${userRole}-token`] = token;
-
-      await Promise.all([
-        fetch(`${API_BASE_URL}/student/give-comment`, {
-          method: "POST",
-          headers: reviewHeaders,
-          body: JSON.stringify({ comment: reviewCommentText, course_id: courseIdFromParams, rating: reviewRating }),
-        }),
-        fetch(`${API_BASE_URL}/student/rateing`, {
-          method: "POST",
-          headers: reviewHeaders, 
-          body: JSON.stringify({ rating: reviewRating, course_id: courseIdFromParams }),
-        }),
-      ]);
-
-      toast.success("Review submitted successfully!");
-      setReviewCommentText("");
-      setReviewRating(0);
-      fetchCourseData(courseIdFromParams, true); 
+      toast.success("Comment submitted successfully!");
+      setNewCommentText("");
+      fetchCourseData(courseIdFromParams, true); // Re-fetch to show new comment
     } catch (error: any) {
-      toast.error(error.message || "Failed to submit review");
-      console.error("Review submission error:", error);
+      toast.error(error.message || "Failed to submit comment");
+      console.error("Comment submission error:", error);
     }
   };
 
-  // --- Rest of the component remains the same ---
-  // (Loading states, error states, JSX structure, etc.)
+  // --- JSX Part ---
+  // (Loading states, error states, JSX structure for tabs, etc.)
+  // Ensure all className, icons, and text are as per your original design
 
   if (loading) {
     return (
@@ -412,54 +539,42 @@ const CourseDetailsPage = () => {
     );
   }
 
-  if (error) {
+  if (error || !course) {
+    // Combined error and no-course state
     return (
       <div className="min-h-screen flex flex-col items-center justify-center text-center p-6 bg-gray-100">
         <FiAlertCircle className="w-16 h-16 text-red-500 mb-4" />
         <h2 className="text-2xl font-semibold text-red-600 mb-3">
-          Error Loading Course
+          {error ? "Error Loading Course" : "Course Not Found"}
         </h2>
-        <p className="text-gray-700 mb-6 max-w-md">{error}</p>
-        {courseIdFromParams && (
-          <button
-            onClick={() => fetchCourseData(courseIdFromParams, true)}
-            className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-          >
-            Try Again
-          </button>
-        )}
-        <Link href="/courses" className="mt-4 text-indigo-600 hover:underline">
+        <p className="text-gray-700 mb-6 max-w-md">
+          {error || "The course you are looking for could not be found."}
+        </p>
+        {error &&
+          courseIdFromParams && ( // Show Try Again only if there was an error and an ID to retry
+            <button
+              onClick={() => fetchCourseData(courseIdFromParams, true)}
+              className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 mb-4"
+            >
+              Try Again
+            </button>
+          )}
+        <Link href="/courses" className="text-indigo-600 hover:underline">
           View Other Courses
         </Link>
       </div>
     );
   }
 
-  if (!course) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center text-center p-6 bg-gray-100">
-        <VscBook className="w-16 h-16 text-gray-400 mb-4" />
-        <h2 className="text-2xl font-semibold text-gray-600 mb-3">
-          Course Not Found
-        </h2>
-        <Link
-          href="/courses"
-          className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-        >
-          Browse Courses
-        </Link>
-      </div>
-    );
-  }
-
+  // If course is loaded:
   const courseImageUrl = course.image
     ? course.image.startsWith("http")
       ? course.image
       : `${API_BASE_URL}${UPLOADS_BASE_PATH}${course.image}`
     : DEFAULT_COURSE_IMAGE;
-  
-  const hasSpecificCourseImage = !!course.image;
 
+  const hasSpecificCourseImage =
+    !!course.image && course.image !== DEFAULT_COURSE_IMAGE;
 
   const TABS = [
     { id: "overview", label: "Overview", icon: <VscBook className="mr-2" /> },
@@ -470,13 +585,13 @@ const CourseDetailsPage = () => {
     },
     {
       id: "qna",
-      label: `Q&A (${course.questions.length})`,
+      label: `Q&A (${course.questions?.length || 0})`,
       icon: <VscCommentDiscussion className="mr-2" />,
     },
     {
-      id: "reviews",
-      label: `Reviews (${course.reviews.length})`,
-      icon: <AiOutlineStar className="mr-2" />,
+      id: "discussion",
+      label: `Discussion (${course.comments?.length || 0})`,
+      icon: <GiDiscussion className="mr-2" />,
     },
   ];
 
@@ -499,7 +614,11 @@ const CourseDetailsPage = () => {
 
         <div className="flex flex-col lg:flex-row gap-8">
           <div className="lg:w-2/3">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+            >
               <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
                 {course.title}
               </h1>
@@ -507,10 +626,12 @@ const CourseDetailsPage = () => {
                 {course.averageRating > 0 && (
                   <div className="flex items-center">
                     <Ratings rating={course.averageRating} />
-                    <span className="ml-1">({course.averageRating.toFixed(1)})</span>
+                    <span className="ml-1">
+                      ({course.averageRating.toFixed(1)})
+                    </span>
                   </div>
                 )}
-                <span>{course.reviews.length} reviews</span>
+                <span>{course.comments?.length || 0} discussion items</span>
                 <span>•</span>
                 <span>{course.department}</span>
                 <span>•</span>
@@ -542,11 +663,14 @@ const CourseDetailsPage = () => {
                       <h2 className="text-xl font-semibold mb-4 text-gray-800">
                         Course Description
                       </h2>
-                      <div className="prose max-w-none text-gray-700 leading-relaxed">
-                        {course.description || "No description provided."}
-                      </div>
+                      <div
+                        className="prose max-w-none text-gray-700 leading-relaxed"
+                        dangerouslySetInnerHTML={{
+                          __html:
+                            course.description || "No description provided.",
+                        }}
+                      ></div>
                     </section>
-
                     {course.benefits && course.benefits.length > 0 && (
                       <section>
                         <h2 className="text-xl font-semibold mb-4 text-gray-800">
@@ -567,10 +691,14 @@ const CourseDetailsPage = () => {
 
                 {activeTab === "worksheets" && (
                   <section>
-                    <h2 className="text-xl font-semibold mb-4 text-gray-800">Worksheet</h2>
+                    <h2 className="text-xl font-semibold mb-4 text-gray-800">
+                      Worksheet
+                    </h2>
                     {hasSpecificCourseImage ? (
                       <div className="mb-6 p-4 border rounded-lg shadow-md bg-white">
-                        <h3 className="text-lg font-semibold mb-3 text-gray-900">{course.title} - Main Worksheet</h3>
+                        <h3 className="text-lg font-semibold mb-3 text-gray-900">
+                          {course.title} - Main Worksheet
+                        </h3>
                         <div className="relative w-full h-64 md:h-96 bg-gray-100 rounded-md overflow-hidden mb-4 border">
                           <Image
                             src={courseImageUrl}
@@ -579,7 +707,10 @@ const CourseDetailsPage = () => {
                             objectFit="contain"
                             className="cursor-pointer transition-transform duration-300 hover:scale-105"
                             onClick={() => setIsImageViewerOpen(true)}
-                            onError={(e) => { (e.target as HTMLImageElement).src = DEFAULT_COURSE_IMAGE; }}
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src =
+                                DEFAULT_COURSE_IMAGE;
+                            }}
                           />
                         </div>
                         <div className="flex flex-col sm:flex-row gap-3">
@@ -591,7 +722,10 @@ const CourseDetailsPage = () => {
                           </button>
                           <a
                             href={courseImageUrl}
-                            download={`${course.title}_worksheet.${courseImageUrl.split('?')[0].split('.').pop() || 'jpg'}`}
+                            download={`${course.title}_worksheet.${
+                              courseImageUrl.split("?")[0].split(".").pop() ||
+                              "jpg"
+                            }`}
                             className="flex-1 sm:flex-none justify-center text-center px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors flex items-center gap-2"
                           >
                             <FiDownloadCloud /> Download Worksheet
@@ -606,16 +740,31 @@ const CourseDetailsPage = () => {
                     )}
                     {course.worksheets && course.worksheets.length > 0 && (
                       <>
-                        <h2 className="text-xl font-semibold my-6 text-gray-800">Additional Downloadable Files</h2>
+                        <h2 className="text-xl font-semibold my-6 text-gray-800">
+                          Additional Downloadable Files
+                        </h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {course.worksheets.map((ws) => (
-                            <div key={ws.id} className="bg-white p-4 rounded-lg shadow border">
+                            <div
+                              key={ws.id}
+                              className="bg-white p-4 rounded-lg shadow border"
+                            >
                               <div className="flex items-start gap-3 mb-2">
                                 <FiDownloadCloud className="text-indigo-600 text-xl mt-1 flex-shrink-0" />
                                 <div>
-                                  <h3 className="font-semibold text-gray-900">{ws.title}</h3>
-                                  {ws.section && <p className="text-xs text-indigo-500">{ws.section}</p>}
-                                  {ws.description && <p className="text-sm text-gray-600 mt-1">{ws.description}</p>}
+                                  <h3 className="font-semibold text-gray-900">
+                                    {ws.title}
+                                  </h3>
+                                  {ws.section && (
+                                    <p className="text-xs text-indigo-500">
+                                      {ws.section}
+                                    </p>
+                                  )}
+                                  {ws.description && (
+                                    <p className="text-sm text-gray-600 mt-1">
+                                      {ws.description}
+                                    </p>
+                                  )}
                                 </div>
                               </div>
                               <a
@@ -648,7 +797,7 @@ const CourseDetailsPage = () => {
                           rows={4}
                         />
                         <button
-                          onClick={handleQuestionSubmit} // This now uses the updated header format
+                          onClick={handleQuestionSubmit}
                           disabled={!newQuestionText.trim()}
                           className="bg-indigo-600 text-white px-6 py-2.5 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
                         >
@@ -656,12 +805,11 @@ const CourseDetailsPage = () => {
                         </button>
                       </div>
                     </section>
-
                     <section>
                       <h2 className="text-xl font-semibold mb-4 text-gray-800">
-                        Questions & Answers ({course.questions.length})
+                        Questions & Answers ({course.questions?.length || 0})
                       </h2>
-                      {course.questions.length > 0 ? (
+                      {course.questions && course.questions.length > 0 ? (
                         <div className="space-y-4">
                           {course.questions.map((question) => (
                             <div
@@ -671,7 +819,10 @@ const CourseDetailsPage = () => {
                               <p className="font-medium text-gray-900">
                                 {question.text}
                               </p>
-                              <p className="text-xs text-gray-500 mt-1">Asked by {question.student.name} • {format(new Date(question.createdAt))}</p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                Asked by {question.student.name} •{" "}
+                                {format(new Date(question.createdAt))}
+                              </p>
                               {question.answer && (
                                 <div className="mt-3 pt-3 pl-3 border-l-4 border-indigo-400 bg-indigo-50/50">
                                   <p className="text-sm font-semibold text-indigo-700 mb-1">
@@ -686,83 +837,79 @@ const CourseDetailsPage = () => {
                           ))}
                         </div>
                       ) : (
-                         <div className="p-4 border rounded-lg bg-gray-50 text-center text-gray-500">
-                            No questions asked yet. Be the first!
-                         </div>
+                        <div className="p-4 border rounded-lg bg-gray-50 text-center text-gray-500">
+                          No questions asked yet. Be the first!
+                        </div>
                       )}
                     </section>
                   </div>
                 )}
 
-                {activeTab === "reviews" && (
+                {activeTab === "discussion" && (
                   <div className="space-y-8">
                     <section className="bg-white p-4 sm:p-6 rounded-lg shadow border">
                       <h2 className="text-xl font-semibold mb-4 text-gray-800">
-                        Write a Review
+                        Leave a Comment
                       </h2>
                       <div className="space-y-4">
-                        <div className="flex items-center gap-2 sm:gap-4">
-                          <span className="font-medium text-gray-700">Your Rating:</span>
-                          <Ratings
-                            rating={reviewRating}
-                            setRating={setReviewRating}
-                            interactive
-                            size={24}
-                          />
-                        </div>
                         <textarea
-                          value={reviewCommentText}
-                          onChange={(e) => setReviewCommentText(e.target.value)}
-                          placeholder="Share your thoughts about this course..."
+                          value={newCommentText}
+                          onChange={(e) => setNewCommentText(e.target.value)}
+                          placeholder="Share your thoughts or join the discussion..."
                           className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                           rows={4}
                         />
                         <button
-                          onClick={handleReviewSubmit} // This also uses the updated header format
-                          disabled={!reviewCommentText.trim() || reviewRating === 0}
+                          onClick={handleCommentSubmit}
+                          disabled={!newCommentText.trim()}
                           className="bg-indigo-600 text-white px-6 py-2.5 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
                         >
-                          Submit Review
+                          Submit Comment
                         </button>
                       </div>
                     </section>
-
                     <section>
                       <h2 className="text-xl font-semibold mb-4 text-gray-800">
-                        Student Reviews ({course.reviews.length})
+                        Discussion ({course.comments?.length || 0})
                       </h2>
-                       {course.reviews.length > 0 ? (
+                      {course.comments && course.comments.length > 0 ? (
                         <div className="space-y-4">
-                          {course.reviews.map((review) => (
+                          {course.comments.map((commentItem) => (
                             <div
-                              key={review.id}
+                              key={commentItem.id}
                               className="bg-white p-4 rounded-lg shadow border"
                             >
                               <div className="flex items-start gap-3 mb-2">
-                                <Avatar className="bg-indigo-100 text-indigo-600 w-10 h-10">
-                                  {review.student.name?.[0]?.toUpperCase() || 'S'}
+                                <Avatar
+                                  src={commentItem.student.avatar || undefined}
+                                  className="bg-indigo-100 text-indigo-600 w-10 h-10"
+                                >
+                                  {!commentItem.student.avatar &&
+                                    (commentItem.student.name?.[0]?.toUpperCase() ||
+                                      "S")}
                                 </Avatar>
                                 <div>
                                   <p className="font-semibold text-gray-900">
-                                    {review.student.name}
+                                    {commentItem.student.name}
                                   </p>
                                   <div className="flex items-center gap-2 text-sm text-gray-600">
-                                    <Ratings rating={review.rating} size={16} />
                                     <span>
-                                      {format(new Date(review.createdAt))}
+                                      {format(new Date(commentItem.createdAt))}
                                     </span>
                                   </div>
                                 </div>
                               </div>
-                              <p className="text-gray-700 leading-relaxed">{review.comment}</p>
+                              <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                                {commentItem.comment}
+                              </p>
                             </div>
                           ))}
                         </div>
-                       ) : (
-                         <div className="p-4 border rounded-lg bg-gray-50 text-center text-gray-500">
-                            No reviews yet for this course.
-                         </div>
-                       )}
+                      ) : (
+                        <div className="p-4 border rounded-lg bg-gray-50 text-center text-gray-500">
+                          No discussion yet. Be the first to comment!
+                        </div>
+                      )}
                     </section>
                   </div>
                 )}
@@ -781,18 +928,20 @@ const CourseDetailsPage = () => {
                   className="w-full h-full object-cover"
                   priority
                   onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = DEFAULT_COURSE_IMAGE;
+                    (e.target as HTMLImageElement).src = DEFAULT_COURSE_IMAGE;
                   }}
                 />
               </div>
-
               <div className="bg-white p-4 rounded-lg shadow-md border">
-                <h3 className="text-lg font-semibold mb-4 text-gray-800">Course Details</h3>
+                <h3 className="text-lg font-semibold mb-4 text-gray-800">
+                  Course Details
+                </h3>
                 <dl className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <dt className="text-gray-600">Department</dt>
-                    <dd className="text-gray-900 font-medium">{course.department}</dd>
+                    <dd className="text-gray-900 font-medium">
+                      {course.department}
+                    </dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-gray-600">Year</dt>
@@ -800,18 +949,21 @@ const CourseDetailsPage = () => {
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-gray-600">Enrolled Students</dt>
-                    <dd className="text-gray-900 font-medium">{course.totalStudents}</dd>
+                    <dd className="text-gray-900 font-medium">
+                      {course.totalStudents}
+                    </dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-gray-600">Average Rating</dt>
                     <dd className="flex items-center gap-1 text-gray-900 font-medium">
                       <AiOutlineStar className="text-yellow-400" />
-                      {course.averageRating > 0 ? course.averageRating.toFixed(1) : "N/A"}
+                      {course.averageRating > 0
+                        ? course.averageRating.toFixed(1)
+                        : "N/A"}
                     </dd>
                   </div>
                 </dl>
               </div>
-
               <div className="space-y-3">
                 <button className="w-full flex items-center justify-center gap-2 p-3 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700">
                   <BsChatDots /> Contact Instructor

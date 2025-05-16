@@ -229,7 +229,10 @@ const AdminSideBar = () => {
                 {/* <Item title="Settings" to="/admin/settings" icon={<Settings />} selected={selected} setSelected={setSelected} /> */}
                 <MenuItem onClick={logoutHandler} icon={<ExitToApp />} style={{ color: muiTheme.palette.error.main }}>
                   <Typography variant="body1" className="font-Poppins">
+                    <a href="/Login">
+
                     Logout
+                    </a>
                   </Typography>
                 </MenuItem>
               </Box>

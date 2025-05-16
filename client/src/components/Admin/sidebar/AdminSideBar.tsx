@@ -397,7 +397,7 @@ const TeacherSideBar = () => {
               <Box mt={(!isMobile && isCollapsed) ? 2 : 4} sx={{textAlign: (!isMobile && isCollapsed) ? 'center' : 'left', paddingLeft: (!isMobile && isCollapsed) ? '0px' : '0px' }}>
                  <MenuItem onClick={logoutHandler} icon={<ExitToApp />} style={{ color: muiTheme.palette.error.main, justifyContent: (!isMobile && isCollapsed) ? 'center' : 'flex-start'  }}>
                    {(!isMobile && !isCollapsed || isMobile) && (
-                      <Typography variant="body1" className="font-Poppins">
+                      <Typography variant="body1" className="font-Poppins -mt-10">
                           Logout
                       </Typography>
                    )}
@@ -417,7 +417,12 @@ const TeacherSideBar = () => {
           <Typography id="logout-modal-title" variant="h6" gutterBottom className='font-Poppins'> Confirm Logout </Typography>
           <Typography id="logout-modal-description" variant="body1" color="text.secondary" mb={3} className='font-Poppins'> Are you sure you want to log out? </Typography>
           <Box display="flex" justifyContent="center" gap={2}>
-              <Button variant="outlined" color="error" onClick={confirmLogout}> Logout </Button>
+            <Button variant="outlined" color="error" onClick={confirmLogout}>
+              <a href="/Login" >
+              Logout
+              </a>
+              
+            </Button>
               <Button variant="outlined" onClick={() => setShowLogoutModal(false)}> Cancel </Button>
           </Box>
         </Box>

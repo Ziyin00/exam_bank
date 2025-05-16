@@ -2,6 +2,8 @@ const express = require('express')
 const { studentSignUp } = require('../controller/student/sign.up');
 const { getCoursesById } = require('../controller/student/getCours')
 const { giveComment } = require('../controller/student/give.comment')
+const { getAllComments } = require('../controller/student/get.course.comment')
+
 const { updateStudent } = require('../controller/supperAdmin/edit.student')
 const { askQuestion } = require('../controller/student/askQuation')
 const { getStudentCourseQA } = require('../controller/student/get.quation.answer')
@@ -36,5 +38,6 @@ router.get('/get-quation-answer/:id', getStudentCourseQA)
 router.get('/get-all-course', getAllCourses)
 router.get('/get-course-by-year/:year', getCoursesByYear)
 router.get('/rating/:id', getCourseRating)
+router.get('/course/:course_id/comments', getAllComments)
 
 module.exports = router
